@@ -113,12 +113,11 @@ async function alle(tabelle, sel, order){
 
 async function laden(){
   try{
-    const [k,d,v,u]=await Promise.all([
+    const [k,d,u]=await Promise.all([
       alle('konten','*','konto_id'),
       alle('deals','konto_id,ticket,position_id,zeit_utc,symbol,typ,eintrag,volumen,preis,magic,kommission,swap,gewinn','zeit_utc'),
-      alle('verlauf','*','zeit'),
       SB.from('nutzer').select('*').maybeSingle()]);
-    D={konten:k,deals:d,verlauf:v,nutzer:u.data};
+    D={konten:k,deals:d,nutzer:u.data};
     zeichneTabs(); zeichnen();
     $('stand').textContent='Stand '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   }catch(e){ $('stand').textContent='Fehler beim Laden: '+(e.message||e); }
@@ -193,9 +192,9 @@ function zeichnen(){
       <div class="zeile"><span class="mut">Equity</span><span>${fmt(k.equity)} $</span></div>
       <div class="zeile"><span class="mut">Heute</span><span class="${kl(z.tagV)}">${pc(z.tagV)}</span></div>
       <div class="zeile"><span class="mut">Offene Trades</span><span>${off.length}${off.length?` (<span class="${kl(offE)}">${geld(offE)}</span>)`:''}</span></div>
-      ${ziel!=null?`<div class="zeile"><span class="mut">Ziel ${fmt(k.ziel_pct,1)} %</span><span>${fmt(ziel)} % erreicht</span></div><div class="balken"><i style="width:${ziel}%"></i></div>`:''}
-      <div class="zeile"><span class="mut">Tagesgrenze ${fmt(k.limit_tag_pct,1)} %</span><span>${fmt(tagRis)} % genutzt</span></div><div class="balken risiko"><i style="width:${tagRis}%"></i></div>
-      <div class="zeile"><span class="mut">Gesamtgrenze ${fmt(k.limit_max_pct,1)} %</span><span>${fmt(gesRis)} % genutzt</span></div><div class="balken risiko"><i style="width:${gesRis}%"></i></div>
+      ${ziel!=null?`<div class="zeile"><span class="mut">Challenge-Ziel</span><span>${pc(gew)} von ${fmt(k.ziel_pct,1)} %</span></div><div class="balken"><i style="width:${ziel}%"></i></div><div class="zeile"><span class="mut">Noch bis zum Ziel</span><span>${gew>=k.ziel_pct?'<span class="pos">erreicht</span>':fmt(k.ziel_pct-gew,2)+' % ('+fmt((k.ziel_pct-gew)/100*g)+' $)'}</span></div>`:''}
+      <div class="zeile"><span class="mut">Tagesverlust</span><span>${fmt(Math.max(0,-z.tagV),2)} % von max. ${fmt(k.limit_tag_pct,1)} %</span></div><div class="balken risiko"><i style="width:${tagRis}%"></i></div>
+      <div class="zeile"><span class="mut">Abstand zur Gesamtgrenze</span><span>${fmt(k.limit_max_pct+z.gesV,2)} % (${fmt((k.limit_max_pct+z.gesV)/100*g)} $)</span></div><div class="balken risiko"><i style="width:${gesRis}%"></i></div>
       <div class="status">${z.gr.length?z.gr.map(x=>`<div class="${x[0]==='rot'?'neg':''}">● ${x[1]}</div>`).join(''):'<span class="pos">● alles in Ordnung</span>'}
       <div class="mut">gemeldet vor ${z.alt<1?'unter 1':fmt(z.alt)} Min. · EAs ${(k.charts_info||'').split(':')[0]}</div></div>
     </div>`;}).join('') || '<div class="mut">Noch keine Konten.</div>';
