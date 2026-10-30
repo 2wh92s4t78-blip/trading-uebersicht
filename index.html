@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Trading Übersicht</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1b1f24;--muted:#6b7380;--line:#e3e6ea;--accent:#2f6fde;--gut:#1f9d55;--warn:#d98b00;--schlecht:#d33a3a;--soft:#eef2f8}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--card:#1b1e23;--text:#e8eaed;--muted:#9aa3ad;--line:#2b3037;--accent:#6b9cff;--gut:#3cc77a;--warn:#f0aa2a;--schlecht:#ff6464;--soft:#232831}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0 8px 0 0}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs button,.btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font:inherit}
+.tabs button.aktiv{background:var(--accent);border-color:var(--accent);color:#fff}
+.rechts{margin-left:auto;display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
+main{max-width:1280px;margin:0 auto;padding:16px}
+h2{font-size:15px;margin:24px 0 10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kpi .l{color:var(--muted);font-size:12px}.kpi .w{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.konten{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.konto{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--gut);border-radius:10px;padding:12px}
+.konto.warn{border-left-color:var(--warn)}.konto.rot{border-left-color:var(--schlecht)}
+.konto .kopf{display:flex;justify-content:space-between;gap:8px}
+.konto .name{font-weight:600}.konto .sub{color:var(--muted);font-size:12px}
+.zeile{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;margin-top:4px}
+.balken{height:6px;background:var(--soft);border-radius:4px;margin-top:3px;overflow:hidden}
+.balken i{display:block;height:100%;background:var(--accent)}
+.balken.risiko i{background:var(--warn)}
+.status{font-size:12px;margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--soft)}
+.pos{color:var(--gut)}.neg{color:var(--schlecht)}.mut{color:var(--muted)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:500;font-size:12px;background:var(--soft)}
+.scroll{overflow-x:auto;border-radius:10px}
+.karte{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.raster2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:800px){.raster2{grid-template-columns:1fr}}
+#login{max-width:340px;margin:12vh auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+#login input{width:100%;padding:9px;margin:6px 0 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+#login button{width:100%;padding:10px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
+.fehler{color:var(--schlecht);font-size:13px;min-height:18px}
+select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+.ja{color:var(--gut);font-weight:600}.nein{color:var(--schlecht);font-weight:600}
+.hinweis{color:var(--muted);font-size:12px;margin:6px 0}
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <h1 style="font-size:18px;margin:0 0 12px">Trading Übersicht</h1>
+  <label>E-Mail<input id="email" type="email" autocomplete="username"></label>
+  <label>Passwort<input id="pw" type="password" autocomplete="current-password"></label>
+  <div class="fehler" id="loginFehler"></div>
+  <button id="loginBtn">Anmelden</button>
+</div>
+
+<div id="app" hidden>
+<header>
+  <h1>Trading Übersicht</h1>
+  <div class="tabs" id="tabs"></div>
+  <div class="rechts"><span id="stand"></span><button class="btn" id="abmelden">Abmelden</button></div>
+</header>
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <h2>Konten</h2>
+  <div class="konten" id="konten"></div>
+
+  <h2>Verlauf</h2>
+  <div class="karte"><canvas id="kurve" height="90"></canvas></div>
+
+  <h2>Auswertung pro Tag <span class="mut" style="font-weight:400;font-size:12px">(geschlossene Trades, deutsche Zeit)</span></h2>
+  <div class="scroll"><table id="tage"></table></div>
+
+  <div class="raster2">
+    <div><h2>Wochen und Monate</h2><div class="scroll"><table id="perioden"></table></div></div>
+    <div><h2>Motoren <select id="motorZeitraum"><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="0" selected>seit Start</option></select></h2><div class="scroll"><table id="motoren"></table></div></div>
+  </div>
+
+  <h2>Vergleich der Konten <span class="mut" style="font-weight:400;font-size:12px">(welches Konto hat ein Signal ausgelöst)</span></h2>
+  <div class="hinweis">Gleicher Motor, gleiche Richtung, Einstieg innerhalb von 30 Minuten = ein Signal. ✓ mit Ergebnis, ✗ = auf diesem Konto nicht ausgelöst, · = Konto lief da noch nicht.</div>
+  <div class="scroll"><table id="vergleich"></table></div>
+
+  <h2>Offene Positionen</h2>
+  <div class="scroll"><table id="offen"></table></div>
+</main>
+</div>
+
+<script>
+const SB = supabase.createClient('https://gzlpjndcmyxidgljqyzo.supabase.co','sb_publishable_GtUjDMn69hcklG4q5bv_0g_lM78R3b9');
+const MOTOR = {3200:'M1 Gold M15',3210:'M2 NAS M15',3240:'M3 DAX M15',3300:'M4 Gold H1',3400:'M5 Gold H1',4000:'M6 BTC M30',3500:'M7 NAS H1',6210:'ES Gold',6220:'ES NAS',0:'Manuell / ohne Magic'};
+const mName = m => MOTOR[m] || ('Magic '+m);
+const $ = id => document.getElementById(id);
+const fmt = (v,d=0) => v==null||isNaN(v) ? '–' : Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const geld = v => (v>0?'+':'')+fmt(v)+' $';
+const pc = v => (v>0?'+':'')+fmt(v,2)+' %';
+const kl = v => v>0.005?'pos':(v<-0.005?'neg':'mut');
+const tagDE = d => new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Berlin'});   // JJJJ-MM-TT in deutscher Zeit
+let D = {konten:[],deals:[],verlauf:[],nutzer:null}, sicht='Alle', kurveChart=null;
+
+async function alle(tabelle, sel, order){
+  let out=[], von=0, n=1000;
+  for(;;){ const {data,error}=await SB.from(tabelle).select(sel).order(order).range(von,von+n-1);
+    if(error) throw error; out=out.concat(data); if(data.length<n) break; von+=n; }
+  return out;
+}
+
+async function laden(){
+  try{
+    const [k,d,v,u]=await Promise.all([
+      alle('konten','*','konto_id'),
+      alle('deals','konto_id,ticket,position_id,zeit_utc,symbol,typ,eintrag,volumen,preis,magic,kommission,swap,gewinn','zeit_utc'),
+      alle('verlauf','*','zeit'),
+      SB.from('nutzer').select('*').maybeSingle()]);
+    D={konten:k,deals:d,verlauf:v,nutzer:u.data};
+    zeichneTabs(); zeichnen();
+    $('stand').textContent='Stand '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ $('stand').textContent='Fehler beim Laden: '+(e.message||e); }
+}
+
+// Positionen aus Deals: Einstieg (Magic, Richtung, Zeit) und Summe aller Ergebnisse, Ausstieg = letzter out-Deal
+function positionen(deals){
+  const P=new Map();
+  for(const d of deals){ if(d.typ!=='buy'&&d.typ!=='sell') continue;
+    const key=d.konto_id+'|'+d.position_id; let p=P.get(key);
+    if(!p){ p={konto_id:d.konto_id,id:d.position_id,symbol:d.symbol,magic:null,dir:0,ein:null,aus:null,erg:0,offen:true}; P.set(key,p); }
+    const e=+d.gewinn+ +d.swap+ +d.kommission; p.erg+=e;
+    if(d.eintrag==='in'&&!p.ein){ p.ein=d.zeit_utc; p.magic=+d.magic; p.dir=d.typ==='buy'?1:-1; }
+    if(d.eintrag==='out'||d.eintrag==='out_by'){ p.aus=d.zeit_utc; }
+  }
+  for(const p of P.values()){ if(p.magic==null) p.magic=0; p.offen=!p.aus; }
+  return [...P.values()];
+}
+
+function sichtbar(){ return D.konten.filter(k=>sicht==='Alle'||k.person===sicht).sort((a,b)=>a.person.localeCompare(b.person)||a.konto_id.localeCompare(b.konto_id)); }
+
+function zeichneTabs(){
+  const s=D.nutzer?.sicht||'alle'; const t=s==='alle'?['Alle','Marcel','Sascha']:[s];
+  if(!t.includes(sicht)) sicht=t[0];
+  $('tabs').innerHTML=t.map(x=>`<button class="${x===sicht?'aktiv':''}" data-s="${x}">${x==='Alle'?'Alle zusammen':x}</button>`).join('');
+  $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{sicht=b.dataset.s; zeichneTabs(); zeichnen();});
+}
+
+function zustand(k){
+  const alt=(Date.now()-new Date(k.zuletzt))/60000; const g=+k.groesse||+k.balance;
+  const tagV=(+k.equity-+k.tag_start)/g*100, gesV=(+k.equity-g)/g*100;
+  const gr=[];
+  if(alt>5) gr.push(['rot',`meldet sich seit ${fmt(alt)} Min. nicht`]);
+  if(k.verbunden===false) gr.push(['rot','keine Verbindung zum Broker']);
+  if(k.algo_an===false) gr.push(['rot','Algo-Handel ist AUS']);
+  if(k.charts_ok===false) gr.push(['rot','EA-Charts fehlen: '+(k.charts_info||'').split(':')[0]]);
+  if(k.limit_tag_pct && -tagV>k.limit_tag_pct*0.6) gr.push(['warn',`Tagesverlust ${fmt(-tagV,1)} % von ${fmt(k.limit_tag_pct,1)} %`]);
+  if(k.limit_max_pct && -gesV>k.limit_max_pct*0.6) gr.push(['warn',`Gesamtverlust ${fmt(-gesV,1)} % von ${fmt(k.limit_max_pct,1)} %`]);
+  const st=gr.some(x=>x[0]==='rot')?'rot':(gr.length?'warn':'');
+  return {st,gr,tagV,gesV,alt};
+}
+
+function zeichnen(){
+  const K=sichtbar(), ids=new Set(K.map(k=>k.konto_id));
+  const deals=D.deals.filter(d=>ids.has(d.konto_id)); const P=positionen(deals); const zu=P.filter(p=>!p.offen);
+  const heute=tagDE(Date.now());
+  const ergTag=t=>zu.filter(p=>tagDE(p.aus)===t).reduce((s,p)=>s+p.erg,0);
+  const seit=tage=>{const g=Date.now()-tage*864e5; return zu.filter(p=>new Date(p.aus)>=g).reduce((s,p)=>s+p.erg,0);};
+  const sum=f=>K.reduce((s,k)=>s+(+f(k)||0),0);
+  const start=sum(k=>k.groesse), bal=sum(k=>k.balance), eq=sum(k=>k.equity);
+  const offenErg=eq-bal;
+  $('kpis').innerHTML=[
+    ['Konten',K.length+' ('+K.filter(k=>zustand(k).st==='rot').length+' Problem)'],
+    ['Kapital (Startgröße)',fmt(start)+' $'],['Kontostand',fmt(bal)+' $'],
+    ['Gewinn seit Start',`<span class="${kl(bal-start)}">${geld(bal-start)}</span>`],
+    ['Heute (geschlossen)',`<span class="${kl(ergTag(heute))}">${geld(ergTag(heute))}</span>`],
+    ['Offen (schwebend)',`<span class="${kl(offenErg)}">${geld(offenErg)}</span>`],
+    ['Letzte 7 Tage',`<span class="${kl(seit(7))}">${geld(seit(7))}</span>`],
+    ['Letzte 30 Tage',`<span class="${kl(seit(30))}">${geld(seit(30))}</span>`]
+  ].map(([l,w])=>`<div class="kpi"><div class="l">${l}</div><div class="w">${w}</div></div>`).join('');
+
+  // Konten-Karten
+  $('konten').innerHTML=K.map(k=>{
+    const z=zustand(k), g=+k.groesse||+k.balance, gew=(+k.balance-g)/g*100;
+    const ziel=+k.ziel_pct>0?Math.max(0,Math.min(100,gew/k.ziel_pct*100)):null;
+    const off=(k.offene||[]); const offE=off.reduce((s,o)=>s+ +o.gewinn,0);
+    const tagRis=k.limit_tag_pct?Math.max(0,Math.min(100,-z.tagV/k.limit_tag_pct*100)):0;
+    const gesRis=k.limit_max_pct?Math.max(0,Math.min(100,-z.gesV/k.limit_max_pct*100)):0;
+    return `<div class="konto ${z.st}">
+      <div class="kopf"><div><div class="name">${k.konto_id}</div><div class="sub">${k.person} · ${k.firma} · ${k.phase||''} · System ${k.system||''}</div></div>
+      <div style="text-align:right"><div style="font-weight:600">${fmt(k.balance)} $</div><div class="sub ${kl(gew)}">${pc(gew)}</div></div></div>
+      <div class="zeile"><span class="mut">Equity</span><span>${fmt(k.equity)} $</span></div>
+      <div class="zeile"><span class="mut">Heute</span><span class="${kl(z.tagV)}">${pc(z.tagV)}</span></div>
+      <div class="zeile"><span class="mut">Offene Trades</span><span>${off.length}${off.length?` (<span class="${kl(offE)}">${geld(offE)}</span>)`:''}</span></div>
+      ${ziel!=null?`<div class="zeile"><span class="mut">Ziel ${fmt(k.ziel_pct,1)} %</span><span>${fmt(ziel)} % erreicht</span></div><div class="balken"><i style="width:${ziel}%"></i></div>`:''}
+      <div class="zeile"><span class="mut">Tagesgrenze ${fmt(k.limit_tag_pct,1)} %</span><span>${fmt(tagRis)} % genutzt</span></div><div class="balken risiko"><i style="width:${tagRis}%"></i></div>
+      <div class="zeile"><span class="mut">Gesamtgrenze ${fmt(k.limit_max_pct,1)} %</span><span>${fmt(gesRis)} % genutzt</span></div><div class="balken risiko"><i style="width:${gesRis}%"></i></div>
+      <div class="status">${z.gr.length?z.gr.map(x=>`<div class="${x[0]==='rot'?'neg':''}">● ${x[1]}</div>`).join(''):'<span class="pos">● alles in Ordnung</span>'}
+      <div class="mut">gemeldet vor ${z.alt<1?'unter 1':fmt(z.alt)} Min. · EAs ${(k.charts_info||'').split(':')[0]}</div></div>
+    </div>`;}).join('') || '<div class="mut">Noch keine Konten.</div>';
+
+  // Kurve: Kontostand je Tag aus Deals (alle sichtbaren Konten summiert)
+  const tageSet=[...new Set(deals.map(d=>tagDE(d.zeit_utc)))].sort();
+  const proTag={}; for(const d of deals){ const t=tagDE(d.zeit_utc); proTag[t]=(proTag[t]||0)+ +d.gewinn+ +d.swap+ +d.kommission; }
+  let lauf=0; const kurve=tageSet.map(t=>(lauf+=proTag[t]));
+  if(kurveChart) kurveChart.destroy();
+  kurveChart=new Chart($('kurve'),{type:'line',data:{labels:tageSet,datasets:[{label:'Kontostand (Summe)',data:kurve,borderColor:getComputedStyle(document.body).getPropertyValue('--accent'),pointRadius:0,borderWidth:2,fill:false}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:10}},y:{ticks:{callback:v=>fmt(v)}}},interaction:{intersect:false,mode:'index'}}});
+
+  // Pro Tag, letzte 30 Tage mit Handel
+  const tL=[...new Set(zu.map(p=>tagDE(p.aus)))].sort().reverse().slice(0,30);
+  $('tage').innerHTML='<tr><th>Tag</th>'+K.map(k=>`<th>${k.konto_id.replace(/-\d+$/,'')}</th>`).join('')+'<th>Gesamt</th><th>Trades</th></tr>'+
+    tL.map(t=>{ const r=K.map(k=>zu.filter(p=>p.konto_id===k.konto_id&&tagDE(p.aus)===t).reduce((s,p)=>s+p.erg,0)); const s=r.reduce((a,b)=>a+b,0);
+      const n=zu.filter(p=>tagDE(p.aus)===t).length;
+      return `<tr><td>${new Date(t).toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'})}</td>${r.map(v=>`<td class="${kl(v)}">${v?geld(v):'–'}</td>`).join('')}<td class="${kl(s)}"><b>${geld(s)}</b></td><td>${n}</td></tr>`;}).join('');
+
+  // Wochen / Monate
+  const per=(f)=>{const m={}; for(const p of zu){const k=f(new Date(p.aus)); m[k]=(m[k]||0)+p.erg;} return Object.entries(m).sort().reverse();};
+  const kw=d=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const n=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-n); const y=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return t.getUTCFullYear()+' KW '+String(Math.ceil(((t-y)/864e5+1)/7)).padStart(2,'0');};
+  const mo=d=>d.toLocaleDateString('sv-SE',{timeZone:'Europe/Berlin'}).slice(0,7);
+  const W=per(kw).slice(0,8), M=per(mo).slice(0,12);
+  $('perioden').innerHTML='<tr><th>Woche</th><th>Ergebnis</th><th>Monat</th><th>Ergebnis</th></tr>'+
+    Array.from({length:Math.max(W.length,M.length)},(_,i)=>`<tr><td>${W[i]?.[0]||''}</td><td class="${kl(W[i]?.[1]||0)}">${W[i]?geld(W[i][1]):''}</td><td>${M[i]?.[0]||''}</td><td class="${kl(M[i]?.[1]||0)}">${M[i]?geld(M[i][1]):''}</td></tr>`).join('');
+
+  // Motoren
+  const zr=+$('motorZeitraum').value; const ab=zr?Date.now()-zr*864e5:0;
+  const mm={}; for(const p of zu){ if(new Date(p.aus)<ab) continue; const m=mm[p.magic]||(mm[p.magic]={n:0,g:0,s:0,best:-1e18,worst:1e18}); m.n++; m.s+=p.erg; if(p.erg>0)m.g++; m.best=Math.max(m.best,p.erg); m.worst=Math.min(m.worst,p.erg);}
+  $('motoren').innerHTML='<tr><th>Motor</th><th>Trades</th><th>Treffer</th><th>Ergebnis</th><th>Bester</th><th>Schlechtester</th></tr>'+
+    Object.entries(mm).sort((a,b)=>a[0]-b[0]).map(([m,x])=>`<tr><td>${mName(+m)}</td><td>${x.n}</td><td>${fmt(x.g/x.n*100)} %</td><td class="${kl(x.s)}"><b>${geld(x.s)}</b></td><td class="pos">${geld(x.best)}</td><td class="neg">${geld(x.worst)}</td></tr>`).join('');
+
+  // Vergleich: Signale clustern (Motor + Richtung, Einstieg innerhalb 30 Min.)
+  const sys=P.filter(p=>p.magic&&p.ein).sort((a,b)=>new Date(a.ein)-new Date(b.ein)); const sig=[];
+  for(const p of sys){ const t=new Date(p.ein); const s=sig.find(x=>x.magic===p.magic&&x.dir===p.dir&&Math.abs(t-x.t)<=30*60000);
+    if(s){ (s.k[p.konto_id]=s.k[p.konto_id]||[]).push(p); } else sig.push({magic:p.magic,dir:p.dir,t,k:{[p.konto_id]:[p]}}); }
+  const erstes={}; for(const p of P){ if(p.ein&&(!erstes[p.konto_id]||p.ein<erstes[p.konto_id])) erstes[p.konto_id]=p.ein; }
+  const KS=K.filter(k=>k.system); const letzte=sig.reverse().slice(0,60);
+  $('vergleich').innerHTML='<tr><th>Zeit</th><th>Motor</th><th>Richtung</th>'+KS.map(k=>`<th>${k.konto_id.replace(/-\d+$/,'')}</th>`).join('')+'</tr>'+
+    letzte.map(s=>`<tr><td>${s.t.toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${mName(s.magic)}</td><td>${s.dir>0?'Long':'Short'}</td>`+
+      KS.map(k=>{ const ps=s.k[k.konto_id]; if(ps){ const e=ps.reduce((a,p)=>a+p.erg,0), of=ps.some(p=>p.offen); return `<td><span class="ja">✓</span> <span class="${kl(e)}">${of?'offen':geld(e)}</span></td>`; }
+        const st=erstes[k.konto_id]; return (!st||new Date(st)>s.t)?'<td class="mut">·</td>':'<td class="nein">✗</td>'; }).join('')+'</tr>').join('');
+
+  // Offene Positionen
+  const off=K.flatMap(k=>(k.offene||[]).map(o=>({...o,konto:k.konto_id})));
+  $('offen').innerHTML='<tr><th>Konto</th><th>Motor</th><th>Symbol</th><th>Richtung</th><th>Lots</th><th>Einstieg</th><th>SL</th><th>Aktuell</th><th>Ergebnis</th></tr>'+
+    (off.length?off.map(o=>`<tr><td>${o.konto.replace(/-\d+$/,'')}</td><td>${mName(+o.magic)}</td><td>${o.symbol}</td><td>${o.typ==='buy'?'Long':'Short'}</td><td>${fmt(o.volumen,2)}</td><td>${o.preis}</td><td>${o.sl||'–'}</td><td>${o.aktuell}</td><td class="${kl(+o.gewinn)}">${geld(+o.gewinn)}</td></tr>`).join(''):'<tr><td colspan="9" class="mut">Keine offenen Positionen.</td></tr>');
+}
+
+$('motorZeitraum').onchange=zeichnen;
+$('loginBtn').onclick=async()=>{ $('loginFehler').textContent='';
+  const {error}=await SB.auth.signInWithPassword({email:$('email').value.trim(),password:$('pw').value});
+  if(error) $('loginFehler').textContent='Anmeldung fehlgeschlagen'; };
+$('pw').addEventListener('keydown',e=>{ if(e.key==='Enter') $('loginBtn').click(); });
+$('abmelden').onclick=()=>SB.auth.signOut();
+let timer=null;
+SB.auth.onAuthStateChange((_e,session)=>{
+  $('login').hidden=!!session; $('app').hidden=!session;
+  clearInterval(timer);
+  if(session){ laden(); timer=setInterval(laden,60000); }
+});
+</script>
+</body>
+</html>
