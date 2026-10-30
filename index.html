@@ -138,6 +138,8 @@ function positionen(deals){
 }
 
 const istDemo=k=>k.phase==='Demo';
+// Kontonummer nur weglassen, wenn der Name ohne Nummer eindeutig ist (z. B. zwei Aqua-Konten mit gleichem Namen)
+const kurz=id=>{const b=id.replace(/-\d+$/,''); return D.konten.filter(k=>k.konto_id.replace(/-\d+$/,'')===b).length>1?id:b;};
 function sichtbar(){ return D.konten.filter(k=>sicht==='Demo'?istDemo(k):(!istDemo(k)&&(sicht==='Alle'||k.person===sicht))).sort((a,b)=>a.person.localeCompare(b.person)||a.konto_id.localeCompare(b.konto_id)); }
 
 function zeichneTabs(){
@@ -210,7 +212,7 @@ function zeichnen(){
 
   // Pro Tag, letzte 30 Tage mit Handel
   const tL=[...new Set(zu.map(p=>tagDE(p.aus)))].sort().reverse().slice(0,30);
-  $('tage').innerHTML='<tr><th>Tag</th>'+K.map(k=>`<th>${k.konto_id.replace(/-\d+$/,'')}</th>`).join('')+'<th>Gesamt</th><th>Trades</th></tr>'+
+  $('tage').innerHTML='<tr><th>Tag</th>'+K.map(k=>`<th>${kurz(k.konto_id)}</th>`).join('')+'<th>Gesamt</th><th>Trades</th></tr>'+
     tL.map(t=>{ const r=K.map(k=>zu.filter(p=>p.konto_id===k.konto_id&&tagDE(p.aus)===t).reduce((s,p)=>s+p.erg,0)); const s=r.reduce((a,b)=>a+b,0);
       const n=zu.filter(p=>tagDE(p.aus)===t).length;
       return `<tr><td>${new Date(t).toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'})}</td>${r.map(v=>`<td class="${kl(v)}">${v?geld(v):'–'}</td>`).join('')}<td class="${kl(s)}"><b>${geld(s)}</b></td><td>${n}</td></tr>`;}).join('');
@@ -235,7 +237,7 @@ function zeichnen(){
     if(s){ (s.k[p.konto_id]=s.k[p.konto_id]||[]).push(p); } else sig.push({magic:p.magic,dir:p.dir,t,k:{[p.konto_id]:[p]}}); }
   const erstes={}; for(const p of P){ if(p.ein&&(!erstes[p.konto_id]||p.ein<erstes[p.konto_id])) erstes[p.konto_id]=p.ein; }
   const KS=K.filter(k=>k.system); const letzte=sig.reverse().slice(0,60);
-  $('vergleich').innerHTML='<tr><th>Zeit</th><th>Motor</th><th>Richtung</th>'+KS.map(k=>`<th>${k.konto_id.replace(/-\d+$/,'')}</th>`).join('')+'</tr>'+
+  $('vergleich').innerHTML='<tr><th>Zeit</th><th>Motor</th><th>Richtung</th>'+KS.map(k=>`<th>${kurz(k.konto_id)}</th>`).join('')+'</tr>'+
     letzte.map(s=>`<tr><td>${s.t.toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${mName(s.magic)}</td><td>${s.dir>0?'Long':'Short'}</td>`+
       KS.map(k=>{ const ps=s.k[k.konto_id]; if(ps){ const e=ps.reduce((a,p)=>a+p.erg,0), of=ps.some(p=>p.offen); return `<td><span class="ja">✓</span> <span class="${kl(e)}">${of?'offen':geld(e)}</span></td>`; }
         const st=erstes[k.konto_id]; return (!st||new Date(st)>s.t)?'<td class="mut">·</td>':'<td class="nein">✗</td>'; }).join('')+'</tr>').join('');
@@ -243,7 +245,7 @@ function zeichnen(){
   // Offene Positionen
   const off=K.flatMap(k=>(k.offene||[]).map(o=>({...o,konto:k.konto_id})));
   $('offen').innerHTML='<tr><th>Konto</th><th>Motor</th><th>Symbol</th><th>Richtung</th><th>Lots</th><th>Einstieg</th><th>SL</th><th>Aktuell</th><th>Ergebnis</th></tr>'+
-    (off.length?off.map(o=>`<tr><td>${o.konto.replace(/-\d+$/,'')}</td><td>${mName(+o.magic)}</td><td>${o.symbol}</td><td>${o.typ==='buy'?'Long':'Short'}</td><td>${fmt(o.volumen,2)}</td><td>${o.preis}</td><td>${o.sl||'–'}</td><td>${o.aktuell}</td><td class="${kl(+o.gewinn)}">${geld(+o.gewinn)}</td></tr>`).join(''):'<tr><td colspan="9" class="mut">Keine offenen Positionen.</td></tr>');
+    (off.length?off.map(o=>`<tr><td>${kurz(o.konto)}</td><td>${mName(+o.magic)}</td><td>${o.symbol}</td><td>${o.typ==='buy'?'Long':'Short'}</td><td>${fmt(o.volumen,2)}</td><td>${o.preis}</td><td>${o.sl||'–'}</td><td>${o.aktuell}</td><td class="${kl(+o.gewinn)}">${geld(+o.gewinn)}</td></tr>`).join(''):'<tr><td colspan="9" class="mut">Keine offenen Positionen.</td></tr>');
 }
 
 $('motorZeitraum').onchange=zeichnen;
