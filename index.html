@@ -201,7 +201,7 @@ function zeichnen(){
       <div class="zeile"><span class="mut">Abstand zur Gesamtgrenze</span><span>${fmt(k.limit_max_pct+z.gesV,2)} % (${fmt((k.limit_max_pct+z.gesV)/100*g)} $)</span></div><div class="balken risiko"><i style="width:${gesRis}%"></i></div>
       <div class="status">${z.gr.length?z.gr.map(x=>`<div class="${x[0]==='rot'?'neg':''}">● ${x[1]}</div>`).join(''):'<span class="pos">● alles in Ordnung</span>'}
       <div class="mut">gemeldet vor ${z.alt<1?'unter 1':fmt(z.alt)} Min. · EAs ${(k.charts_info||'').split(':')[0]}</div></div>
-    </div>`;}).join('') || '<div class="mut">Noch keine Konten.</div>';
+    </div>`;}).join('') || (D.nutzer?'<div class="mut">Noch keine Konten.</div>':'<div class="neg">Dieser Login ist noch nicht freigeschaltet (kein Eintrag in der Tabelle „nutzer“). Bitte bei Marcel melden.</div>');
 
   // Kurve: Kontostand je Tag aus Deals (alle sichtbaren Konten summiert)
   const tageSet=[...new Set(deals.map(d=>tagDE(d.zeit_utc)))].sort();
