@@ -94,7 +94,8 @@ select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--lin
 
 <script>
 const SB = supabase.createClient('https://gzlpjndcmyxidgljqyzo.supabase.co','sb_publishable_GtUjDMn69hcklG4q5bv_0g_lM78R3b9');
-const MOTOR = {3200:'M1 Gold M15',3210:'M2 NAS M15',3240:'M3 DAX M15',3300:'M4 Gold H1',3400:'M5 Gold H1',4000:'M6 BTC M30',3500:'M7 NAS H1',6210:'ES Gold',6220:'ES NAS',0:'Manuell / ohne Magic'};
+const MOTOR = {3200:'M1 Gold M15',3210:'M2 NAS M15',3240:'M3 DAX M15',3300:'M4 Gold H1',3400:'M5 Gold H1',4000:'M6 BTC M30',3500:'M7 NAS H1',6210:'ES Gold',6220:'ES NAS',0:'Manuell / ohne Magic',
+  4200:'M1 Gold M15 (alt)',4210:'M2 NAS M15 (alt)',4240:'M3 DAX M15 (alt)',4300:'M4 Gold H1 (alt)',4400:'M5 Gold H1 (alt)',5000:'M6 BTC M30 (alt)'};   // alte Magics mit Sascha-Versatz (vor V17)
 const mName = m => MOTOR[m] || ('Magic '+m);
 const $ = id => document.getElementById(id);
 const fmt = (v,d=0) => v==null||isNaN(v) ? '–' : Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
