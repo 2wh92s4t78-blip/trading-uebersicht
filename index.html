@@ -137,12 +137,13 @@ function positionen(deals){
   return [...P.values()];
 }
 
-function sichtbar(){ return D.konten.filter(k=>sicht==='Alle'||k.person===sicht).sort((a,b)=>a.person.localeCompare(b.person)||a.konto_id.localeCompare(b.konto_id)); }
+const istDemo=k=>k.phase==='Demo';
+function sichtbar(){ return D.konten.filter(k=>sicht==='Demo'?istDemo(k):(!istDemo(k)&&(sicht==='Alle'||k.person===sicht))).sort((a,b)=>a.person.localeCompare(b.person)||a.konto_id.localeCompare(b.konto_id)); }
 
 function zeichneTabs(){
-  const s=D.nutzer?.sicht||'alle'; const t=s==='alle'?['Alle','Marcel','Sascha']:[s];
+  const s=D.nutzer?.sicht||'alle'; const t=(s==='alle'?['Alle','Marcel','Sascha']:[s]).concat(D.konten.some(istDemo)?['Demo']:[]);
   if(!t.includes(sicht)) sicht=t[0];
-  $('tabs').innerHTML=t.map(x=>`<button class="${x===sicht?'aktiv':''}" data-s="${x}">${x==='Alle'?'Alle zusammen':x}</button>`).join('');
+  $('tabs').innerHTML=t.map(x=>`<button class="${x===sicht?'aktiv':''}" data-s="${x}">${x==='Alle'?'Alle zusammen':(x==='Demo'?'Demo / Test':x)}</button>`).join('');
   $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{sicht=b.dataset.s; zeichneTabs(); zeichnen();});
 }
 
