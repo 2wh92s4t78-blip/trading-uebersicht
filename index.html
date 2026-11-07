@@ -157,7 +157,7 @@ function zustand(k){
   if(alt>5) gr.push(['rot',`meldet sich seit ${fmt(alt)} Min. nicht`]);
   if(k.verbunden===false) gr.push(['rot','keine Verbindung zum Broker']);
   if(k.algo_an===false) gr.push(['rot','Algo-Handel ist AUS']);
-  if(k.charts_ok===false) gr.push(['rot','EA-Charts fehlen: '+(k.charts_info||'').split(':')[0]]);
+  if(k.charts_ok===false) gr.push(['rot','EA-Pr&uuml;fung: '+(k.charts_info||'').split(':')[0]]);
   if(k.limit_tag_pct && -tagV>k.limit_tag_pct*0.6) gr.push(['warn',`Tagesverlust ${fmt(-tagV,1)} % von ${fmt(k.limit_tag_pct,1)} %`]);
   if(k.limit_max_pct && -gesV>k.limit_max_pct*0.6) gr.push(['warn',`Gesamtverlust ${fmt(-gesV,1)} % von ${fmt(k.limit_max_pct,1)} %`]);
   const st=gr.some(x=>x[0]==='rot')?'rot':(gr.length?'warn':'');
