@@ -76,6 +76,10 @@ select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--lin
   <div class="mut" style="margin:0 0 6px"><span id="risikoInfo"></span> · <label style="cursor:pointer"><input type="checkbox" id="nurAuffaellig"> nur Auffällige (gelb/rot)</label></div>
   <div class="scroll"><table id="risiko"></table></div>
 
+  <h2>Eingriffe von Hand <span class="mut" style="font-weight:400;font-size:12px">(automatisch erkannt: Schließen ohne EA, Ziel von Hand, Trades ohne EA, Stop-out; letzte 60 Tage)</span></h2>
+  <div id="eingriffInfo" class="mut" style="margin:0 0 6px"></div>
+  <div class="scroll"><table id="eingriffe"></table></div>
+
   <h2>Verlauf</h2>
   <div class="karte"><canvas id="kurve" height="90"></canvas></div>
 
@@ -120,7 +124,7 @@ async function laden(){
   try{
     const [k,d,u]=await Promise.all([
       alle('konten','*','konto_id'),
-      alle('deals','konto_id,ticket,position_id,zeit_utc,symbol,typ,eintrag,volumen,preis,sl,magic,kommission,swap,gewinn','zeit_utc'),
+      alle('deals','konto_id,ticket,position_id,zeit_utc,symbol,typ,eintrag,volumen,preis,sl,magic,kommission,swap,gewinn,kommentar','zeit_utc'),
       SB.from('nutzer').select('*').maybeSingle()]);
     D={konten:k,deals:d,nutzer:u.data};
     zeichneTabs(); zeichnen();
@@ -205,6 +209,26 @@ function risikoPruefung(K, deals){
   return R.sort((a,b)=>new Date(b.t)-new Date(a.t));
 }
 
+// ---- Eingriffe von Hand: aus den Deals erkannt (kein Eintragen nötig) ----
+// System B setzt nie ein Ziel (TP) -> "[tp" bei B-Motoren = von Hand. Schließung ohne Magic an einer EA-Position = von Hand.
+const istB=m=>(m>=3200&&m<3700)||m===4000;
+function eingriffe(deals){
+  const ein=new Map(); for(const d of deals){ if(d.eintrag==='in'&&(d.typ==='buy'||d.typ==='sell')){ const k=d.konto_id+'|'+d.position_id; if(!ein.has(k)) ein.set(k,d); } }
+  const E=[];
+  for(const d of deals){
+    if(d.typ!=='buy'&&d.typ!=='sell') continue;
+    const k=d.konto_id+'|'+d.position_id, e=ein.get(k), em=e?+e.magic:0, m=+d.magic, kom=(d.kommentar||'').toLowerCase();
+    const erg=+d.gewinn+ +(d.swap||0)+ +(d.kommission||0);
+    if(d.eintrag==='in'&&!m){ E.push({t:d.zeit_utc,konto:d.konto_id,m:0,symbol:d.symbol,art:'Trade von Hand eröffnet',erg:null,st:'gelb'}); continue; }
+    if(d.eintrag!=='out'&&d.eintrag!=='out_by') continue;
+    if(kom.startsWith('[so')){ E.push({t:d.zeit_utc,konto:d.konto_id,m:em,symbol:d.symbol,art:'Stop-out durch die Firma',erg,st:'neg'}); continue; }
+    if(em&&!m){ const teil=e&&+d.volumen<+e.volumen-1e-9;
+      E.push({t:d.zeit_utc,konto:d.konto_id,m:em,symbol:d.symbol,art:teil?`teilweise von Hand geschlossen (${fmt(+d.volumen,2)} von ${fmt(+e.volumen,2)} Lot)`:'von Hand geschlossen',erg,st:'gelb'}); continue; }
+    if(istB(em)&&kom.startsWith('[tp')){ E.push({t:d.zeit_utc,konto:d.konto_id,m:em,symbol:d.symbol,art:'Ziel (TP) von Hand gesetzt, dort geschlossen',erg,st:'gelb'}); }
+  }
+  return E.sort((a,b)=>new Date(b.t)-new Date(a.t));
+}
+
 const istDemo=k=>k.phase==='Demo';
 // Kontonummer nur weglassen, wenn der Name ohne Nummer eindeutig ist (z. B. zwei Aqua-Konten mit gleichem Namen)
 const kurz=id=>{const b=id.replace(/-\d+$/,''); return D.konten.filter(k=>k.konto_id.replace(/-\d+$/,'')===b).length>1?id:b;};
@@ -235,6 +259,7 @@ function zeichnen(){
   const K=sichtbar(), ids=new Set(K.map(k=>k.konto_id));
   const deals=D.deals.filter(d=>ids.has(d.konto_id)); const P=positionen(deals); const zu=P.filter(p=>!p.offen);
   const RK=risikoPruefung(K,deals); const rk7=RK.filter(x=>x.st==='neg'&&new Date(x.t)>=Date.now()-7*864e5);
+  const EG=eingriffe(deals); const eg7=EG.filter(x=>new Date(x.t)>=Date.now()-7*864e5);
   const heute=tagDE(Date.now());
   const ergTag=t=>zu.filter(p=>tagDE(p.aus)===t).reduce((s,p)=>s+p.erg,0);
   const seit=tage=>{const g=Date.now()-tage*864e5; return zu.filter(p=>new Date(p.aus)>=g).reduce((s,p)=>s+p.erg,0);};
@@ -254,6 +279,7 @@ function zeichnen(){
   // Konten-Karten
   $('konten').innerHTML=K.map(k=>{
     const z=zustand(k), g=+k.groesse||+k.balance, gew=(+k.balance-g)/g*100;
+    const ef=eg7.filter(x=>x.konto===k.konto_id); if(ef.length) z.gr.push(['info',`${ef.length} Eingriff${ef.length>1?'e':''} von Hand in den letzten 7 Tagen (siehe unten)`]);
     const rf=rk7.filter(x=>x.konto===k.konto_id); if(rf.length){ z.gr.push(['warn',`Risiko weicht ab: ${[...new Set(rf.map(x=>mName(x.m)))].join(', ')} (siehe Risiko-Kontrolle)`]); if(!z.st) z.st='warn'; }
     const ziel=+k.ziel_pct>0?Math.max(0,Math.min(100,gew/k.ziel_pct*100)):null;
     const off=(k.offene||[]); const offE=off.reduce((s,o)=>s+ +o.gewinn,0);
@@ -268,7 +294,8 @@ function zeichnen(){
       ${ziel!=null?`<div class="zeile"><span class="mut">Challenge-Ziel</span><span>${pc(gew)} von ${fmt(k.ziel_pct,1)} %</span></div><div class="balken"><i style="width:${ziel}%"></i></div><div class="zeile"><span class="mut">Noch bis zum Ziel</span><span>${gew>=k.ziel_pct?'<span class="pos">erreicht</span>':fmt(k.ziel_pct-gew,2)+' % ('+fmt((k.ziel_pct-gew)/100*g)+' $)'}</span></div>`:''}
       <div class="zeile"><span class="mut">Tagesverlust</span><span>${fmt(Math.max(0,-z.tagV),2)} % von max. ${fmt(k.limit_tag_pct,1)} %</span></div><div class="balken risiko"><i style="width:${tagRis}%"></i></div>
       <div class="zeile"><span class="mut">Abstand zur Gesamtgrenze</span><span>${fmt(k.limit_max_pct+z.gesV,2)} % (${fmt((k.limit_max_pct+z.gesV)/100*g)} $)</span></div><div class="balken risiko"><i style="width:${gesRis}%"></i></div>
-      <div class="status">${z.gr.length?z.gr.map(x=>`<div class="${x[0]==='rot'?'neg':''}">● ${x[1]}</div>`).join(''):'<span class="pos">● alles in Ordnung</span>'}
+      <div class="status">${z.gr.some(x=>x[0]!=='info')?z.gr.filter(x=>x[0]!=='info').map(x=>`<div class="${x[0]==='rot'?'neg':''}">● ${x[1]}</div>`).join(''):'<span class="pos">● alles in Ordnung</span>'}
+      ${z.gr.filter(x=>x[0]==='info').map(x=>`<div class="mut">● ${x[1]}</div>`).join('')}
       <div class="mut">gemeldet vor ${z.alt<1?'unter 1':fmt(z.alt)} Min. · EAs ${(k.charts_info||'').split(':')[0]}</div></div>
     </div>`;}).join('') || (D.nutzer?'<div class="mut">Noch keine Konten.</div>':'<div class="neg">Dieser Login ist noch nicht freigeschaltet (kein Eintrag in der Tabelle „nutzer“). Bitte bei Marcel melden.</div>');
 
@@ -278,6 +305,13 @@ function zeichnen(){
   const RKz=($('nurAuffaellig').checked?RK.filter(x=>x.st!=='pos'):RK).slice(0,100);   // immer nach Zeit, neueste oben
   $('risiko').innerHTML='<tr><th>Zeit</th><th>Konto</th><th>Motor</th><th>Lots</th><th>Risiko ist</th><th>Soll</th><th>Bewertung</th></tr>'+
     (RKz.length?RKz.map(x=>`<tr><td>${new Date(x.t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${kurz(x.konto)}</td><td>${mName(x.m)}</td><td>${fmt(x.lots,2)}</td><td>${x.ist==null?'–':fmt(x.ist,3)+' %'}</td><td>${x.soll==null?'–':fmt(x.soll,3)+' %'}</td><td class="${x.st}">● ${x.text}</td></tr>`).join(''):'<tr><td colspan="7" class="mut">–</td></tr>');
+
+  // Eingriffe von Hand (letzte 60 Tage)
+  const EGz=EG.filter(x=>new Date(x.t)>=Date.now()-60*864e5);
+  const egSum=EGz.reduce((s,x)=>s+(x.erg||0),0);
+  $('eingriffInfo').innerHTML=EGz.length?`${EGz.length} Eingriffe in 60 Tagen · Ergebnis dieser Schließungen zusammen <span class="${kl(egSum)}">${geld(egSum)}</span>`:'Keine Eingriffe von Hand in den letzten 60 Tagen.';
+  $('eingriffe').innerHTML='<tr><th>Zeit</th><th>Konto</th><th>Motor</th><th>Symbol</th><th>Was</th><th>Ergebnis</th></tr>'+
+    (EGz.length?EGz.map(x=>`<tr><td>${new Date(x.t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${kurz(x.konto)}</td><td>${x.m?mName(x.m):'–'}</td><td>${x.symbol||''}</td><td class="${x.st}">● ${x.art}</td><td class="${kl(x.erg||0)}">${x.erg==null?'–':geld(x.erg)}</td></tr>`).join(''):'<tr><td colspan="6" class="mut">–</td></tr>');
 
   // Kurve: Kontostand je Tag aus Deals (alle sichtbaren Konten summiert)
   const tageSet=[...new Set(deals.map(d=>tagDE(d.zeit_utc)))].sort();
