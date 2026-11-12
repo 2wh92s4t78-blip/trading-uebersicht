@@ -73,7 +73,7 @@ select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--lin
   <div class="konten" id="konten"></div>
 
   <h2>Risiko-Kontrolle <span class="mut" style="font-weight:400;font-size:12px">(Risiko je Trade in % der Kontogröße, verglichen mit dem Sollwert für Firma, Phase und Motor; letzte 30 Tage)</span></h2>
-  <div id="risikoInfo" class="mut" style="margin:0 0 6px"></div>
+  <div class="mut" style="margin:0 0 6px"><span id="risikoInfo"></span> · <label style="cursor:pointer"><input type="checkbox" id="nurAuffaellig"> nur Auffällige (gelb/rot)</label></div>
   <div class="scroll"><table id="risiko"></table></div>
 
   <h2>Verlauf</h2>
@@ -275,7 +275,7 @@ function zeichnen(){
   // Risiko-Kontrolle
   const nRot=RK.filter(x=>x.st==='neg').length, nGelb=RK.filter(x=>x.st==='gelb').length;
   $('risikoInfo').innerHTML=RK.length?`${RK.length} Einstiege geprüft · <span class="${nRot?'neg':'pos'}">${nRot} rot</span> · <span class="${nGelb?'gelb':'mut'}">${nGelb} gelb</span> · grün = Sollwert ±10 %`:'Noch keine Einstiege in den letzten 30 Tagen.';
-  const RKz=[...RK.filter(x=>x.st!=='pos'),...RK.filter(x=>x.st==='pos')].slice(0,80);
+  const RKz=($('nurAuffaellig').checked?RK.filter(x=>x.st!=='pos'):RK).slice(0,100);   // immer nach Zeit, neueste oben
   $('risiko').innerHTML='<tr><th>Zeit</th><th>Konto</th><th>Motor</th><th>Lots</th><th>Risiko ist</th><th>Soll</th><th>Bewertung</th></tr>'+
     (RKz.length?RKz.map(x=>`<tr><td>${new Date(x.t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${kurz(x.konto)}</td><td>${mName(x.m)}</td><td>${fmt(x.lots,2)}</td><td>${x.ist==null?'–':fmt(x.ist,3)+' %'}</td><td>${x.soll==null?'–':fmt(x.soll,3)+' %'}</td><td class="${x.st}">● ${x.text}</td></tr>`).join(''):'<tr><td colspan="7" class="mut">–</td></tr>');
 
@@ -325,7 +325,7 @@ function zeichnen(){
     (off.length?off.map(o=>`<tr><td>${kurz(o.konto)}</td><td>${mName(+o.magic)}</td><td>${o.symbol}</td><td>${o.typ==='buy'?'Long':'Short'}</td><td>${fmt(o.volumen,2)}</td><td>${o.preis}</td><td>${o.sl||'–'}</td><td>${o.aktuell}</td><td class="${kl(+o.gewinn)}">${geld(+o.gewinn)}</td></tr>`).join(''):'<tr><td colspan="9" class="mut">Keine offenen Positionen.</td></tr>');
 }
 
-$('motorZeitraum').onchange=zeichnen;
+$('motorZeitraum').onchange=zeichnen; $('nurAuffaellig').onchange=zeichnen;
 $('loginBtn').onclick=async()=>{ $('loginFehler').textContent='';
   const {error}=await SB.auth.signInWithPassword({email:$('email').value.trim(),password:$('pw').value});
   if(error) $('loginFehler').textContent='Anmeldung fehlgeschlagen'; };
