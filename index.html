@@ -33,7 +33,7 @@ h2{font-size:15px;margin:24px 0 10px}
 .balken i{display:block;height:100%;background:var(--accent)}
 .balken.risiko i{background:var(--warn)}
 .status{font-size:12px;margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--soft)}
-.pos{color:var(--gut)}.neg{color:var(--schlecht)}.mut{color:var(--muted)}
+.pos{color:var(--gut)}.neg{color:var(--schlecht)}.mut{color:var(--muted)}.gelb{color:var(--warn)}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-variant-numeric:tabular-nums}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
@@ -72,6 +72,10 @@ select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--lin
   <h2>Konten</h2>
   <div class="konten" id="konten"></div>
 
+  <h2>Risiko-Kontrolle <span class="mut" style="font-weight:400;font-size:12px">(Risiko je Trade in % der Kontogröße, verglichen mit dem Sollwert für Firma, Phase und Motor; letzte 30 Tage)</span></h2>
+  <div id="risikoInfo" class="mut" style="margin:0 0 6px"></div>
+  <div class="scroll"><table id="risiko"></table></div>
+
   <h2>Verlauf</h2>
   <div class="karte"><canvas id="kurve" height="90"></canvas></div>
 
@@ -94,7 +98,7 @@ select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--lin
 
 <script>
 const SB = supabase.createClient('https://gzlpjndcmyxidgljqyzo.supabase.co','sb_publishable_GtUjDMn69hcklG4q5bv_0g_lM78R3b9');
-const MOTOR = {3200:'M1 Gold M15',3210:'M2 NAS M15',3240:'M3 DAX M15',3300:'M4 Gold H1',3400:'M5 Gold H1',4000:'M6 BTC M30',3500:'M7 NAS H1',6210:'ES Gold',6220:'ES NAS',0:'Manuell / ohne Magic',
+const MOTOR = {3200:'M1 Gold M15',3210:'M2 NAS M15',3240:'M3 DAX M15',3300:'M4 Gold H1',3400:'M5 Gold H1',4000:'M6 BTC M30',3500:'M7 NAS H1',3600:'M8 NAS Tag',6210:'ES Gold',6220:'ES NAS',0:'Manuell / ohne Magic',
   4200:'M1 Gold M15 (alt)',4210:'M2 NAS M15 (alt)',4240:'M3 DAX M15 (alt)',4300:'M4 Gold H1 (alt)',4400:'M5 Gold H1 (alt)',5000:'M6 BTC M30 (alt)'};   // alte Magics mit Sascha-Versatz (vor V17)
 const mName = m => MOTOR[m] || ('Magic '+m);
 const $ = id => document.getElementById(id);
@@ -116,7 +120,7 @@ async function laden(){
   try{
     const [k,d,u]=await Promise.all([
       alle('konten','*','konto_id'),
-      alle('deals','konto_id,ticket,position_id,zeit_utc,symbol,typ,eintrag,volumen,preis,magic,kommission,swap,gewinn','zeit_utc'),
+      alle('deals','konto_id,ticket,position_id,zeit_utc,symbol,typ,eintrag,volumen,preis,sl,magic,kommission,swap,gewinn','zeit_utc'),
       SB.from('nutzer').select('*').maybeSingle()]);
     D={konten:k,deals:d,nutzer:u.data};
     zeichneTabs(); zeichnen();
@@ -136,6 +140,69 @@ function positionen(deals){
   }
   for(const p of P.values()){ if(p.magic==null) p.magic=0; p.offen=!p.aus; }
   return [...P.values()];
+}
+
+// ---- Risiko-Kontrolle: Ist-Risiko je Einstieg gegen Sollwert (Firma/Phase/Motor) ----
+// Sollwerte in % der Kontogröße. B: Kern-Risiko je Modus, Motor 5 halb, Motor 4 x0,85 oder x1,5 (Kontext), BTC und Motor 8 fest.
+const B_KERN={Challenge:0.5,Funded:0.35,Eigenkapital:0.5};
+const ES_SOLL={Challenge:{6210:1.0,6220:0.5,6230:0.4},Funded:{6210:0.625,6220:0.3125,6230:0.25},Eigenkapital:{6210:0.70,6220:0.35,6230:0.28}};
+function sollWerte(modus,magic){
+  if(magic>=6200&&magic<6300){ const v=ES_SOLL[modus]?.[magic]; return v?[[v,'']]:[]; }
+  if(magic===4000) return [[0.08,'BTC fest']];
+  if(magic===3600) return [[1.0,'Motor 8 fest']];
+  const k=B_KERN[modus]; if(!k) return [];
+  if(magic===3400) return [[k*0.5,'halbes Risiko']];
+  if(magic===3300) return [[k*0.85,'x0,85'],[k*1.5,'x1,5 Fortsetzung']];
+  if([3200,3210,3240,3500].includes(magic)) return [[k,'']];
+  return [];
+}
+function modusAusPhase(p){ p=(p||'').toLowerCase();
+  if(p.includes('demo')) return null;                       // Demo: jeder Modus erlaubt, wird nur angezeigt
+  if(p.includes('funded')||p.includes('dauer')) return 'Funded';
+  if(p.includes('eigen')) return 'Eigenkapital';
+  return 'Challenge'; }
+// Wert je Lot und Kurspunkt in Kontowährung, aus geschlossenen Trades geschätzt (Median), je Konto und Symbol
+function punktWerte(deals){
+  const ein=new Map(), aus=new Map(), out={};
+  for(const d of deals){ if(d.typ!=='buy'&&d.typ!=='sell') continue; const k=d.konto_id+'|'+d.position_id;
+    if(d.eintrag==='in'){ if(!ein.has(k)) ein.set(k,d); }
+    else if(d.eintrag==='out'||d.eintrag==='out_by'){ const a=aus.get(k)||{g:0,vp:0,v:0}; a.g+= +d.gewinn; a.vp+= +d.volumen* +d.preis; a.v+= +d.volumen; aus.set(k,a); } }
+  const L={};
+  for(const [k,e] of ein){ const a=aus.get(k); if(!a||!a.v) continue; const x=a.vp/a.v, dir=e.typ==='buy'?1:-1, dp=(x- +e.preis)*dir;
+    if(Math.abs(x- +e.preis)< +e.preis*0.001||!(+e.volumen>0)) continue;
+    const m=a.g/(+e.volumen*dp); if(m>0&&isFinite(m)) (L[e.konto_id+'|'+e.symbol]=L[e.konto_id+'|'+e.symbol]||[]).push(m); }
+  for(const [k,v] of Object.entries(L)){ v.sort((a,b)=>a-b); out[k]=v[Math.floor(v.length/2)]; }
+  return out;
+}
+function risikoPruefung(K, deals){
+  const PW=punktWerte(D.deals), ab=Date.now()-30*864e5, R=[];
+  const kmap=Object.fromEntries(K.map(k=>[k.konto_id,k]));
+  for(const d of deals){
+    if(d.eintrag!=='in'||(d.typ!=='buy'&&d.typ!=='sell')) continue;
+    const m=+d.magic, k=kmap[d.konto_id]; if(!k||!m||new Date(d.zeit_utc)<ab) continue;
+    const pw=PW[d.konto_id+'|'+d.symbol], g=+k.groesse; if(!(+d.sl>0)||!g) continue;
+    const ist=pw? +d.volumen*Math.abs(+d.preis- +d.sl)*pw/g*100 : null;
+    const modus=modusAusPhase(k.phase), alle=[];
+    for(const md of ['Challenge','Funded','Eigenkapital']) for(const [v,txt] of sollWerte(md,m)) alle.push({md,v,txt});
+    if(!alle.length) continue;
+    const kand=modus?alle.filter(x=>x.md===modus):alle;
+    const naechst=(liste)=>liste.reduce((b,x)=>(!b||Math.abs(Math.log(ist/x.v))<Math.abs(Math.log(ist/b.v)))?x:b,null);
+    let st='mut', text='Punktwert noch unbekannt (erst nach dem ersten geschlossenen Trade)', soll=kand[0];
+    if(ist!=null){
+      soll=naechst(kand); const r=ist/soll.v;
+      // Halbes Risiko (Bremse ab 5 % Rückgang) ist erlaubt und wird extra benannt
+      const halb=Math.abs(Math.log(ist/(soll.v*0.5)))<Math.abs(Math.log(r));
+      const besser=naechst(alle), rb=ist/besser.v;
+      if(r>=0.85&&r<=1.10){ st='pos'; text='passt'+(soll.txt?' ('+soll.txt+')':'')+(modus?'':' · Modus '+soll.md); }
+      else if(halb&&ist/(soll.v*0.5)>=0.85&&ist/(soll.v*0.5)<=1.10){ st='gelb'; text='halbes Risiko (Bremse ab 5 % Rückgang?)'; }
+      else if(besser.md!==soll.md&&rb>=0.85&&rb<=1.10){ st='neg'; text=`passt zu ${besser.md} (${fmt(besser.v,3)} %), nicht zu ${soll.md} – Phase am Chart prüfen`; }
+      else if(r>1.10&&r<=1.25){ st='gelb'; text='etwas zu hoch (Schlupf beim Einstieg?)'; }
+      else if(r<0.85&&r>=0.70){ st='gelb'; text='etwas zu niedrig (Lot-Rundung oder Grenze)'; }
+      else { st='neg'; text=r>1?'deutlich zu hoch':'deutlich zu niedrig'; }
+    }
+    R.push({konto:d.konto_id,t:d.zeit_utc,m,symbol:d.symbol,lots:+d.volumen,ist,soll:soll?.v,st,text});
+  }
+  return R.sort((a,b)=>new Date(b.t)-new Date(a.t));
 }
 
 const istDemo=k=>k.phase==='Demo';
@@ -167,6 +234,7 @@ function zustand(k){
 function zeichnen(){
   const K=sichtbar(), ids=new Set(K.map(k=>k.konto_id));
   const deals=D.deals.filter(d=>ids.has(d.konto_id)); const P=positionen(deals); const zu=P.filter(p=>!p.offen);
+  const RK=risikoPruefung(K,deals); const rk7=RK.filter(x=>x.st==='neg'&&new Date(x.t)>=Date.now()-7*864e5);
   const heute=tagDE(Date.now());
   const ergTag=t=>zu.filter(p=>tagDE(p.aus)===t).reduce((s,p)=>s+p.erg,0);
   const seit=tage=>{const g=Date.now()-tage*864e5; return zu.filter(p=>new Date(p.aus)>=g).reduce((s,p)=>s+p.erg,0);};
@@ -186,6 +254,7 @@ function zeichnen(){
   // Konten-Karten
   $('konten').innerHTML=K.map(k=>{
     const z=zustand(k), g=+k.groesse||+k.balance, gew=(+k.balance-g)/g*100;
+    const rf=rk7.filter(x=>x.konto===k.konto_id); if(rf.length){ z.gr.push(['warn',`Risiko weicht ab: ${[...new Set(rf.map(x=>mName(x.m)))].join(', ')} (siehe Risiko-Kontrolle)`]); if(!z.st) z.st='warn'; }
     const ziel=+k.ziel_pct>0?Math.max(0,Math.min(100,gew/k.ziel_pct*100)):null;
     const off=(k.offene||[]); const offE=off.reduce((s,o)=>s+ +o.gewinn,0);
     const tagRis=k.limit_tag_pct?Math.max(0,Math.min(100,-z.tagV/k.limit_tag_pct*100)):0;
@@ -202,6 +271,13 @@ function zeichnen(){
       <div class="status">${z.gr.length?z.gr.map(x=>`<div class="${x[0]==='rot'?'neg':''}">● ${x[1]}</div>`).join(''):'<span class="pos">● alles in Ordnung</span>'}
       <div class="mut">gemeldet vor ${z.alt<1?'unter 1':fmt(z.alt)} Min. · EAs ${(k.charts_info||'').split(':')[0]}</div></div>
     </div>`;}).join('') || (D.nutzer?'<div class="mut">Noch keine Konten.</div>':'<div class="neg">Dieser Login ist noch nicht freigeschaltet (kein Eintrag in der Tabelle „nutzer“). Bitte bei Marcel melden.</div>');
+
+  // Risiko-Kontrolle
+  const nRot=RK.filter(x=>x.st==='neg').length, nGelb=RK.filter(x=>x.st==='gelb').length;
+  $('risikoInfo').innerHTML=RK.length?`${RK.length} Einstiege geprüft · <span class="${nRot?'neg':'pos'}">${nRot} rot</span> · <span class="${nGelb?'gelb':'mut'}">${nGelb} gelb</span> · grün = Sollwert ±10 %`:'Noch keine Einstiege in den letzten 30 Tagen.';
+  const RKz=[...RK.filter(x=>x.st!=='pos'),...RK.filter(x=>x.st==='pos')].slice(0,80);
+  $('risiko').innerHTML='<tr><th>Zeit</th><th>Konto</th><th>Motor</th><th>Lots</th><th>Risiko ist</th><th>Soll</th><th>Bewertung</th></tr>'+
+    (RKz.length?RKz.map(x=>`<tr><td>${new Date(x.t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${kurz(x.konto)}</td><td>${mName(x.m)}</td><td>${fmt(x.lots,2)}</td><td>${x.ist==null?'–':fmt(x.ist,3)+' %'}</td><td>${x.soll==null?'–':fmt(x.soll,3)+' %'}</td><td class="${x.st}">● ${x.text}</td></tr>`).join(''):'<tr><td colspan="7" class="mut">–</td></tr>');
 
   // Kurve: Kontostand je Tag aus Deals (alle sichtbaren Konten summiert)
   const tageSet=[...new Set(deals.map(d=>tagDE(d.zeit_utc)))].sort();
