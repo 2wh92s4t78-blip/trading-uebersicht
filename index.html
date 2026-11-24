@@ -229,7 +229,7 @@ function eingriffe(deals){
   return E.sort((a,b)=>new Date(b.t)-new Date(a.t));
 }
 
-const istDemo=k=>k.phase==='Demo';
+const istDemo=k=>k.phase==='Demo'||(k.firma==='Vantage'&&/demo/i.test(k.server||''));   // 24.11.2026: auch Vantage-Demo im Eigenkapital-Modus (Kombi 500K)
 // Kontonummer nur weglassen, wenn der Name ohne Nummer eindeutig ist (z. B. zwei Aqua-Konten mit gleichem Namen)
 const kurz=id=>{const b=id.replace(/-\d+$/,''); return D.konten.filter(k=>k.konto_id.replace(/-\d+$/,'')===b).length>1?id:b;};
 function sichtbar(){ return D.konten.filter(k=>sicht==='Demo'?istDemo(k):(!istDemo(k)&&(sicht==='Alle'||k.person===sicht))).sort((a,b)=>a.person.localeCompare(b.person)||a.konto_id.localeCompare(b.konto_id)); }
