@@ -2,53 +2,83 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <title>Trading Übersicht</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--text:#1b1f24;--muted:#6b7380;--line:#e3e6ea;--accent:#2f6fde;--gut:#1f9d55;--warn:#d98b00;--schlecht:#d33a3a;--soft:#eef2f8}
-@media (prefers-color-scheme:dark){:root{--bg:#121417;--card:#1b1e23;--text:#e8eaed;--muted:#9aa3ad;--line:#2b3037;--accent:#6b9cff;--gut:#3cc77a;--warn:#f0aa2a;--schlecht:#ff6464;--soft:#232831}}
+:root{--bg:#f4f5f7;--card:#fff;--text:#1b1f24;--muted:#6b7380;--line:#e3e6ea;--accent:#2f6fde;--gut:#1f9d55;--warn:#c98000;--schlecht:#d33a3a;--soft:#eef1f5}
+@media (prefers-color-scheme:dark){:root{--bg:#111316;--card:#1a1d22;--text:#e8eaed;--muted:#959eaa;--line:#2a2f36;--accent:#6b9cff;--gut:#3cc77a;--warn:#f0aa2a;--schlecht:#ff6464;--soft:#22262d}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-header h1{font-size:16px;margin:0 8px 0 0}
-.tabs{display:flex;gap:4px;flex-wrap:wrap}
-.tabs button,.btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font:inherit}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--text);font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+header h1{font-size:15px;margin:0}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1 1 auto;min-width:0}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button,.btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:5px 10px;border-radius:7px;cursor:pointer;font:inherit;white-space:nowrap}
 .tabs button.aktiv{background:var(--accent);border-color:var(--accent);color:#fff}
-.rechts{margin-left:auto;display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
-main{max-width:1280px;margin:0 auto;padding:16px}
-h2{font-size:15px;margin:24px 0 10px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.kpi .l{color:var(--muted);font-size:12px}.kpi .w{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
-.konten{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.konto{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--gut);border-radius:10px;padding:12px}
+.rechts{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:11px;margin-left:auto}
+main{max-width:1280px;margin:0 auto;padding:10px 12px 40px}
+h2{font-size:13px;margin:14px 0 6px;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+.kpi .l{color:var(--muted);font-size:11px}.kpi .w{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.konten{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px}
+.konto{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gut);border-radius:8px;padding:8px 10px}
 .konto.warn{border-left-color:var(--warn)}.konto.rot{border-left-color:var(--schlecht)}
-.konto .kopf{display:flex;justify-content:space-between;gap:8px}
-.konto .name{font-weight:600}.konto .sub{color:var(--muted);font-size:12px}
-.zeile{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;margin-top:4px}
-.balken{height:6px;background:var(--soft);border-radius:4px;margin-top:3px;overflow:hidden}
-.balken i{display:block;height:100%;background:var(--accent)}
-.balken.risiko i{background:var(--warn)}
-.status{font-size:12px;margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--soft)}
+.kopf{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.name{font-weight:600}.sub{color:var(--muted);font-size:11px}
+.chips{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-variant-numeric:tabular-nums}
+.chips span b{font-weight:500;color:var(--muted)}
+.bars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
+.bar .t{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.balken{height:5px;background:var(--soft);border-radius:3px;margin-top:2px;overflow:hidden}
+.balken i{display:block;height:100%;background:var(--accent)}.balken.r i{background:var(--warn)}
+.status{font-size:11px;margin-top:5px;color:var(--muted)}
 .pos{color:var(--gut)}.neg{color:var(--schlecht)}.mut{color:var(--muted)}.gelb{color:var(--warn)}
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-variant-numeric:tabular-nums}
-th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-th:first-child,td:first-child{text-align:left}
-th{color:var(--muted);font-weight:500;font-size:12px;background:var(--soft)}
-.scroll{overflow-x:auto;border-radius:10px}
-.karte{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
-.raster2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:800px){.raster2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;background:var(--card);font-variant-numeric:tabular-nums}
+th,td{padding:5px 7px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:inherit}
+tr{background:var(--card)}
+th{color:var(--muted);font-weight:500;font-size:11px;background:var(--soft)}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;-webkit-overflow-scrolling:touch}
+.karte{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-top:8px}
+details>summary{cursor:pointer;padding:9px 10px;font-weight:600;list-style:none;display:flex;gap:8px;align-items:center}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:'▸';color:var(--muted);transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+details>summary .mut{font-weight:400;font-size:11px;margin-left:auto;text-align:right}
+details .inhalt{padding:0 10px 10px}
+details .scroll{border-radius:6px}
+.mehr{display:block;width:100%;margin-top:6px;text-align:center}
+.pruef{display:flex;flex-direction:column;gap:3px}
+.pruef div{display:flex;gap:8px;align-items:baseline}
+.pruef .z{color:var(--muted);font-size:11px;min-width:78px;font-variant-numeric:tabular-nums}
+.leiste{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 0;color:var(--muted);font-size:11px}
+select{font:inherit;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+.ja{color:var(--gut);font-weight:600}.nein{color:var(--schlecht);font-weight:600}.grau{color:var(--muted)}
+.hinweis{color:var(--muted);font-size:11px;margin:0 0 6px}
 #login{max-width:340px;margin:12vh auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
-#login input{width:100%;padding:9px;margin:6px 0 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+#login input{width:100%;padding:9px;margin:6px 0 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:16px/1.3 inherit}
 #login button{width:100%;padding:10px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
 .fehler{color:var(--schlecht);font-size:13px;min-height:18px}
-select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
-.ja{color:var(--gut);font-weight:600}.nein{color:var(--schlecht);font-weight:600}
-.hinweis{color:var(--muted);font-size:12px;margin:6px 0}
+.raster2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:800px){.raster2{grid-template-columns:1fr}}
+@media (max-width:600px){
+  header h1{display:none}
+  main{padding:8px 8px 40px}
+  .kpis{grid-template-columns:repeat(3,1fr);gap:5px}
+  .kpi{padding:5px 7px}.kpi .w{font-size:13px}
+  .konten{grid-template-columns:1fr}
+  .ph{display:none}
+  th,td{padding:5px 5px}
+}
 </style>
 </head>
 <body>
@@ -62,9 +92,9 @@ select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--lin
 
 <div id="app" hidden>
 <header>
-  <h1>Trading Übersicht</h1>
+  <h1>Trading</h1>
   <div class="tabs" id="tabs"></div>
-  <div class="rechts"><span id="stand"></span><button class="btn" id="abmelden">Abmelden</button></div>
+  <div class="rechts"><span id="stand"></span><button class="btn" id="neu" title="Neu laden">↻</button><button class="btn" id="abmelden">Abmelden</button></div>
 </header>
 <main>
   <div class="kpis" id="kpis"></div>
@@ -72,46 +102,58 @@ select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--lin
   <h2>Konten</h2>
   <div class="konten" id="konten"></div>
 
-  <h2>Risiko-Kontrolle <span class="mut" style="font-weight:400;font-size:12px">(Risiko je Trade in % der Kontogröße, verglichen mit dem Sollwert für Firma, Phase und Motor; letzte 30 Tage)</span></h2>
-  <div class="mut" style="margin:0 0 6px"><span id="risikoInfo"></span> · <label style="cursor:pointer"><input type="checkbox" id="nurAuffaellig"> nur Auffällige (gelb/rot)</label></div>
-  <div class="scroll"><table id="risiko"></table></div>
-
-  <h2>Eingriffe von Hand <span class="mut" style="font-weight:400;font-size:12px">(automatisch erkannt: Schließen ohne EA, Ziel von Hand, Trades ohne EA, Stop-out; letzte 60 Tage)</span></h2>
-  <div id="eingriffInfo" class="mut" style="margin:0 0 6px"></div>
-  <div class="scroll"><table id="eingriffe"></table></div>
-
-  <h2>Verlauf</h2>
-  <div class="karte"><canvas id="kurve" height="90"></canvas></div>
-
-  <h2>Auswertung pro Tag <span class="mut" style="font-weight:400;font-size:12px">(geschlossene Trades, deutsche Zeit)</span></h2>
-  <div class="scroll"><table id="tage"></table></div>
-
-  <div class="raster2">
-    <div><h2>Wochen und Monate</h2><div class="scroll"><table id="perioden"></table></div></div>
-    <div><h2>Motoren <select id="motorZeitraum"><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="0" selected>seit Start</option></select></h2><div class="scroll"><table id="motoren"></table></div></div>
-  </div>
-
-  <h2>Vergleich der Konten <span class="mut" style="font-weight:400;font-size:12px">(welches Konto hat ein Signal ausgelöst)</span></h2>
-  <div class="hinweis">Gleicher Motor, gleiche Richtung, Einstieg innerhalb von 30 Minuten = ein Signal. ✓ mit Ergebnis, ✗ = auf diesem Konto nicht ausgelöst, · = Konto lief da noch nicht.</div>
-  <div class="scroll"><table id="vergleich"></table></div>
-
-  <h2>Offene Positionen</h2>
+  <h2>Offene Trades <span class="mut" id="offenInfo" style="font-weight:400"></span></h2>
   <div class="scroll"><table id="offen"></table></div>
+
+  <h2>Prüfung <span class="mut" style="font-weight:400;font-size:11px">(letzte 14 Tage: fehlende Signale, Handeingriffe, Risiko, hängende Motoren)</span></h2>
+  <div class="karte"><div class="pruef" id="pruef"></div></div>
+
+  <div class="leiste">Zeilen je Liste <select id="zeilen"><option>10</option><option>25</option><option>50</option><option value="9999">alle</option></select></div>
+
+  <details id="d_vergleich"><summary>Signale je Konto <span class="mut" id="vergleichInfo"></span></summary><div class="inhalt">
+    <div class="hinweis">✓ = ausgelöst (mit Ergebnis) · 🕐 = gleiche Idee, andere Kerze · <span class="nein">✗</span> = fehlt ohne erkennbaren Grund (Journal prüfen) · <span class="grau">○</span> = fehlt mit Grund (Platz belegt, BTC-Kurse, nur hier) · · = Konto lief noch nicht · ✋ = von Hand geschlossen</div>
+    <div class="scroll"><table id="vergleich"></table></div><button class="btn mehr" data-mehr="vergleich">mehr anzeigen</button></div></details>
+
+  <details id="d_risiko"><summary>Risiko-Kontrolle <span class="mut" id="risikoInfo"></span></summary><div class="inhalt">
+    <div class="hinweis">Risiko je Trade in % der Kontogröße gegen den Sollwert für Firma, Phase und Motor, letzte 30 Tage · <label><input type="checkbox" id="nurAuffaellig"> nur Auffällige</label></div>
+    <div class="scroll"><table id="risiko"></table></div><button class="btn mehr" data-mehr="risiko">mehr anzeigen</button></div></details>
+
+  <details id="d_eingriffe"><summary>Eingriffe von Hand <span class="mut" id="eingriffInfo"></span></summary><div class="inhalt">
+    <div class="hinweis">Automatisch erkannt: Schließen ohne EA, Ziel (TP) von Hand, Trade ohne EA, Stop-out; letzte 60 Tage.</div>
+    <div class="scroll"><table id="eingriffe"></table></div><button class="btn mehr" data-mehr="eingriffe">mehr anzeigen</button></div></details>
+
+  <details id="d_verlauf"><summary>Verlauf</summary><div class="inhalt"><canvas id="kurve" height="90"></canvas></div></details>
+
+  <details id="d_tage"><summary>Ergebnis pro Tag <span class="mut">geschlossene Trades, deutsche Zeit</span></summary><div class="inhalt">
+    <div class="scroll"><table id="tage"></table></div><button class="btn mehr" data-mehr="tage">mehr anzeigen</button></div></details>
+
+  <details id="d_perioden"><summary>Wochen, Monate und Motoren</summary><div class="inhalt raster2">
+    <div><div class="scroll"><table id="perioden"></table></div></div>
+    <div><div class="hinweis" style="margin:6px 0">Motoren <select id="motorZeitraum"><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="0" selected>seit Start</option></select></div><div class="scroll"><table id="motoren"></table></div></div>
+  </div></details>
 </main>
 </div>
 
 <script>
 const SB = supabase.createClient('https://gzlpjndcmyxidgljqyzo.supabase.co','sb_publishable_GtUjDMn69hcklG4q5bv_0g_lM78R3b9');
-const MOTOR = {3200:'M1 Gold M15',3210:'M2 NAS M15',3240:'M3 DAX M15',3300:'M4 Gold H1',3400:'M5 Gold H1',4000:'M6 BTC M30',3500:'M7 NAS H1',3600:'M8 NAS Tag',6210:'ES Gold',6220:'ES NAS',0:'Manuell / ohne Magic',
-  4200:'M1 Gold M15 (alt)',4210:'M2 NAS M15 (alt)',4240:'M3 DAX M15 (alt)',4300:'M4 Gold H1 (alt)',4400:'M5 Gold H1 (alt)',5000:'M6 BTC M30 (alt)'};   // alte Magics mit Sascha-Versatz (vor V17)
+const MOTOR = {3200:'M1 Gold M15',3210:'M2 NAS M15',3240:'M3 DAX M15',3300:'M4 Gold H1',3400:'M5 Gold H1',4000:'M6 BTC M30',3500:'M7 NAS H1',3600:'M8 NAS Tag',6210:'ES Gold',6220:'ES NAS',6230:'ES NAS H1',0:'Manuell / ohne Magic',
+  4200:'M1 Gold M15 (alt)',4210:'M2 NAS M15 (alt)',4240:'M3 DAX M15 (alt)',4300:'M4 Gold H1 (alt)',4400:'M5 Gold H1 (alt)',5000:'M6 BTC M30 (alt)'};
 const mName = m => MOTOR[m] || ('Magic '+m);
+const mKurz = m => (MOTOR[m]||('Magic '+m)).split(' ')[0]+(m>=6200&&m<6300?' '+(MOTOR[m]||'').split(' ').slice(1).join(' '):'');
 const $ = id => document.getElementById(id);
 const fmt = (v,d=0) => v==null||isNaN(v) ? '–' : Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
 const geld = v => (v>0?'+':'')+fmt(v)+' $';
 const pc = v => (v>0?'+':'')+fmt(v,2)+' %';
 const kl = v => v>0.005?'pos':(v<-0.005?'neg':'mut');
-const tagDE = d => new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Berlin'});   // JJJJ-MM-TT in deutscher Zeit
-let D = {konten:[],deals:[],verlauf:[],nutzer:null}, sicht='Alle', kurveChart=null;
+const tagDE = d => new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Berlin'});
+const zeit = d => new Date(d).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const lsGet=(k,d)=>{ try{ const v=localStorage.getItem(k); return v==null?d:v; }catch(e){ return d; } };
+const lsSet=(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} };
+let D = {konten:[],deals:[],nutzer:null}, sicht='Alle', kurveChart=null;
+const MEHR={};   // je Liste: Anzahl zusätzlich eingeblendeter Zeilen
+const N = () => +$('zeilen').value;
+const grenze = (liste,name) => liste.slice(0, N() + (MEHR[name]||0));
+function mehrKnopf(name,gesamt){ const b=document.querySelector(`[data-mehr="${name}"]`); if(b) b.hidden = gesamt <= N()+(MEHR[name]||0); }
 
 async function alle(tabelle, sel, order){
   let out=[], von=0, n=1000;
@@ -119,7 +161,6 @@ async function alle(tabelle, sel, order){
     if(error) throw error; out=out.concat(data); if(data.length<n) break; von+=n; }
   return out;
 }
-
 async function laden(){
   try{
     const [k,d,u]=await Promise.all([
@@ -128,26 +169,25 @@ async function laden(){
       SB.from('nutzer').select('*').maybeSingle()]);
     D={konten:k,deals:d,nutzer:u.data};
     zeichneTabs(); zeichnen();
-    $('stand').textContent='Stand '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){ $('stand').textContent='Fehler beim Laden: '+(e.message||e); }
+    $('stand').textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ $('stand').textContent='Fehler: '+(e.message||e); }
 }
 
-// Positionen aus Deals: Einstieg (Magic, Richtung, Zeit) und Summe aller Ergebnisse, Ausstieg = letzter out-Deal
+// Positionen aus Deals
 function positionen(deals){
   const P=new Map();
   for(const d of deals){ if(d.typ!=='buy'&&d.typ!=='sell') continue;
     const key=d.konto_id+'|'+d.position_id; let p=P.get(key);
-    if(!p){ p={konto_id:d.konto_id,id:d.position_id,symbol:d.symbol,magic:null,dir:0,ein:null,aus:null,erg:0,offen:true}; P.set(key,p); }
-    const e=+d.gewinn+ +d.swap+ +d.kommission; p.erg+=e;
+    if(!p){ p={konto_id:d.konto_id,id:d.position_id,symbol:d.symbol,magic:null,dir:0,ein:null,aus:null,erg:0,offen:true,hand:false}; P.set(key,p); }
+    p.erg+= +d.gewinn+ +d.swap+ +d.kommission;
     if(d.eintrag==='in'&&!p.ein){ p.ein=d.zeit_utc; p.magic=+d.magic; p.dir=d.typ==='buy'?1:-1; }
-    if(d.eintrag==='out'||d.eintrag==='out_by'){ p.aus=d.zeit_utc; }
+    if(d.eintrag==='out'||d.eintrag==='out_by'){ p.aus=d.zeit_utc; if(!+d.magic||(/^\[tp/i.test(d.kommentar||'')&&istB(p.magic))) p.hand=true; }
   }
   for(const p of P.values()){ if(p.magic==null) p.magic=0; p.offen=!p.aus; }
   return [...P.values()];
 }
 
-// ---- Risiko-Kontrolle: Ist-Risiko je Einstieg gegen Sollwert (Firma/Phase/Motor) ----
-// Sollwerte in % der Kontogröße. B: Kern-Risiko je Modus, Motor 5 halb, Motor 4 x0,85 oder x1,5 (Kontext), BTC und Motor 8 fest.
+// ---- Risiko-Kontrolle ----
 const B_KERN={Challenge:0.5,Funded:0.35,Eigenkapital:0.5};
 const ES_SOLL={Challenge:{6210:1.0,6220:0.5,6230:0.4},Funded:{6210:0.625,6220:0.3125,6230:0.25},Eigenkapital:{6210:0.70,6220:0.35,6230:0.28}};
 function sollWerte(modus,magic){
@@ -161,11 +201,10 @@ function sollWerte(modus,magic){
   return [];
 }
 function modusAusPhase(p){ p=(p||'').toLowerCase();
-  if(p.includes('demo')) return null;                       // Demo: jeder Modus erlaubt, wird nur angezeigt
+  if(p.includes('demo')) return null;
   if(p.includes('funded')||p.includes('dauer')) return 'Funded';
   if(p.includes('eigen')) return 'Eigenkapital';
   return 'Challenge'; }
-// Wert je Lot und Kurspunkt in Kontowährung, aus geschlossenen Trades geschätzt (Median), je Konto und Symbol
 function punktWerte(deals){
   const ein=new Map(), aus=new Map(), out={};
   for(const d of deals){ if(d.typ!=='buy'&&d.typ!=='sell') continue; const k=d.konto_id+'|'+d.position_id;
@@ -178,30 +217,31 @@ function punktWerte(deals){
   for(const [k,v] of Object.entries(L)){ v.sort((a,b)=>a-b); out[k]=v[Math.floor(v.length/2)]; }
   return out;
 }
+// letzte echte Einzahlung je Konto (Start oder Reset); Trades davor gehören zu einer alten Kontogröße
+function resetZeiten(){ const r={}; for(const d of D.deals){ if(d.typ!=='buy'&&d.typ!=='sell'&&+d.gewinn>=10000&&(!r[d.konto_id]||d.zeit_utc>r[d.konto_id])) r[d.konto_id]=d.zeit_utc; } return r; }
 function risikoPruefung(K, deals){
-  const PW=punktWerte(D.deals), ab=Date.now()-30*864e5, R=[];
+  const PW=punktWerte(D.deals), ab=Date.now()-30*864e5, R=[], RS=resetZeiten();
   const kmap=Object.fromEntries(K.map(k=>[k.konto_id,k]));
   for(const d of deals){
     if(d.eintrag!=='in'||(d.typ!=='buy'&&d.typ!=='sell')) continue;
-    const m=+d.magic, k=kmap[d.konto_id]; if(!k||!m||new Date(d.zeit_utc)<ab) continue;
+    const m=+d.magic, k=kmap[d.konto_id]; if(!k||!m||new Date(d.zeit_utc)<ab||(RS[d.konto_id]&&d.zeit_utc<RS[d.konto_id])) continue;
     const pw=PW[d.konto_id+'|'+d.symbol], g=+k.groesse; if(!(+d.sl>0)||!g) continue;
     const ist=pw? +d.volumen*Math.abs(+d.preis- +d.sl)*pw/g*100 : null;
-    const modus=modusAusPhase(k.phase), alle=[];
-    for(const md of ['Challenge','Funded','Eigenkapital']) for(const [v,txt] of sollWerte(md,m)) alle.push({md,v,txt});
-    if(!alle.length) continue;
-    const kand=modus?alle.filter(x=>x.md===modus):alle;
+    const modus=modusAusPhase(k.phase), alleS=[];
+    for(const md of ['Challenge','Funded','Eigenkapital']) for(const [v,txt] of sollWerte(md,m)) alleS.push({md,v,txt});
+    if(!alleS.length) continue;
+    const kand=modus?alleS.filter(x=>x.md===modus):alleS;
     const naechst=(liste)=>liste.reduce((b,x)=>(!b||Math.abs(Math.log(ist/x.v))<Math.abs(Math.log(ist/b.v)))?x:b,null);
-    let st='mut', text='Punktwert noch unbekannt (erst nach dem ersten geschlossenen Trade)', soll=kand[0];
+    let st='mut', text='Punktwert noch unbekannt', soll=kand[0];
     if(ist!=null){
       soll=naechst(kand); const r=ist/soll.v;
-      // Halbes Risiko (Bremse ab 5 % Rückgang) ist erlaubt und wird extra benannt
       const halb=Math.abs(Math.log(ist/(soll.v*0.5)))<Math.abs(Math.log(r));
-      const besser=naechst(alle), rb=ist/besser.v;
+      const besser=naechst(alleS), rb=ist/besser.v;
       if(r>=0.85&&r<=1.10){ st='pos'; text='passt'+(soll.txt?' ('+soll.txt+')':'')+(modus?'':' · Modus '+soll.md); }
-      else if(halb&&ist/(soll.v*0.5)>=0.85&&ist/(soll.v*0.5)<=1.10){ st='gelb'; text='halbes Risiko (Bremse ab 5 % Rückgang?)'; }
-      else if(besser.md!==soll.md&&rb>=0.85&&rb<=1.10){ st='neg'; text=`passt zu ${besser.md} (${fmt(besser.v,3)} %), nicht zu ${soll.md} – Phase am Chart prüfen`; }
-      else if(r>1.10&&r<=1.25){ st='gelb'; text='etwas zu hoch (Schlupf beim Einstieg?)'; }
-      else if(r<0.85&&r>=0.70){ st='gelb'; text='etwas zu niedrig (Lot-Rundung oder Grenze)'; }
+      else if(halb&&ist/(soll.v*0.5)>=0.85&&ist/(soll.v*0.5)<=1.10){ st='gelb'; text='halbes Risiko (Bremse ab 5 %?)'; }
+      else if(besser.md!==soll.md&&rb>=0.85&&rb<=1.10){ st='neg'; text=`passt zu ${besser.md}, nicht zu ${soll.md} – Phase prüfen`; }
+      else if(r>1.10&&r<=1.25){ st='gelb'; text='etwas zu hoch (Schlupf?)'; }
+      else if(r<0.85&&r>=0.70){ st='gelb'; text='etwas zu niedrig (Rundung/Grenze)'; }
       else { st='neg'; text=r>1?'deutlich zu hoch':'deutlich zu niedrig'; }
     }
     R.push({konto:d.konto_id,t:d.zeit_utc,m,symbol:d.symbol,lots:+d.volumen,ist,soll:soll?.v,st,text});
@@ -209,9 +249,9 @@ function risikoPruefung(K, deals){
   return R.sort((a,b)=>new Date(b.t)-new Date(a.t));
 }
 
-// ---- Eingriffe von Hand: aus den Deals erkannt (kein Eintragen nötig) ----
-// System B setzt nie ein Ziel (TP) -> "[tp" bei B-Motoren = von Hand. Schließung ohne Magic an einer EA-Position = von Hand.
+// ---- Eingriffe von Hand ----
 const istB=m=>(m>=3200&&m<3700)||m===4000;
+const istES=m=>m>=6200&&m<6300;
 function eingriffe(deals){
   const ein=new Map(); for(const d of deals){ if(d.eintrag==='in'&&(d.typ==='buy'||d.typ==='sell')){ const k=d.konto_id+'|'+d.position_id; if(!ein.has(k)) ein.set(k,d); } }
   const E=[];
@@ -221,24 +261,28 @@ function eingriffe(deals){
     const erg=+d.gewinn+ +(d.swap||0)+ +(d.kommission||0);
     if(d.eintrag==='in'&&!m){ E.push({t:d.zeit_utc,konto:d.konto_id,m:0,symbol:d.symbol,art:'Trade von Hand eröffnet',erg:null,st:'gelb'}); continue; }
     if(d.eintrag!=='out'&&d.eintrag!=='out_by') continue;
-    if(kom.startsWith('[so')){ E.push({t:d.zeit_utc,konto:d.konto_id,m:em,symbol:d.symbol,art:'Stop-out durch die Firma',erg,st:'neg'}); continue; }
+    if(kom.startsWith('[so')){ E.push({t:d.zeit_utc,konto:d.konto_id,pos:k,m:em,symbol:d.symbol,art:'Stop-out durch die Firma',erg,st:'neg'}); continue; }
     if(em&&!m){ const teil=e&&+d.volumen<+e.volumen-1e-9;
-      E.push({t:d.zeit_utc,konto:d.konto_id,m:em,symbol:d.symbol,art:teil?`teilweise von Hand geschlossen (${fmt(+d.volumen,2)} von ${fmt(+e.volumen,2)} Lot)`:'von Hand geschlossen',erg,st:'gelb'}); continue; }
-    if(istB(em)&&kom.startsWith('[tp')){ E.push({t:d.zeit_utc,konto:d.konto_id,m:em,symbol:d.symbol,art:'Ziel (TP) von Hand gesetzt, dort geschlossen',erg,st:'gelb'}); }
+      E.push({t:d.zeit_utc,konto:d.konto_id,pos:k,m:em,symbol:d.symbol,art:teil?`teilweise von Hand geschlossen (${fmt(+d.volumen,2)} von ${fmt(+e.volumen,2)})`:'von Hand geschlossen',erg,st:'gelb'}); continue; }
+    if(istB(em)&&kom.startsWith('[tp')){ E.push({t:d.zeit_utc,konto:d.konto_id,pos:k,m:em,symbol:d.symbol,art:'Ziel (TP) von Hand',erg,st:'gelb'}); }
   }
   return E.sort((a,b)=>new Date(b.t)-new Date(a.t));
 }
 
-const istDemo=k=>k.phase==='Demo'||(k.firma==='Vantage'&&/demo/i.test(k.server||''));   // 24.11.2026: auch Vantage-Demo im Eigenkapital-Modus (Kombi 500K)
-// Kontonummer nur weglassen, wenn der Name ohne Nummer eindeutig ist (z. B. zwei Aqua-Konten mit gleichem Namen)
-const kurz=id=>{const b=id.replace(/-\d+$/,''); return D.konten.filter(k=>k.konto_id.replace(/-\d+$/,'')===b).length>1?id:b;};
+const istDemo=k=>k.phase==='Demo'||(k.firma==='Vantage'&&/demo/i.test(k.server||''));
+const FK={FTMO:'FTMO',FunderPro:'FP',FundingTraders:'FT',AquaFunded:'Aqua',CTI:'CTI',Vantage:'Vant'};
+// kurzer Kontoname: Firma (+ Größe bei Vantage) + Endziffern, wenn sonst nicht eindeutig
+function kn(id){ const k=D.konten.find(x=>x.konto_id===id); if(!k) return id;
+  let b=(FK[k.firma]||k.firma)+(k.firma==='Vantage'?' '+fmt(+k.groesse/1000)+'K':'');
+  const gleich=D.konten.filter(x=>(FK[x.firma]||x.firma)===(FK[k.firma]||k.firma)&&(k.firma!=='Vantage'||+x.groesse===+k.groesse));
+  if(gleich.length>1) b+='·'+String(k.login||id).slice(-3); return b; }
 function sichtbar(){ return D.konten.filter(k=>sicht==='Demo'?istDemo(k):(!istDemo(k)&&(sicht==='Alle'||k.person===sicht))).sort((a,b)=>a.person.localeCompare(b.person)||a.konto_id.localeCompare(b.konto_id)); }
 
 function zeichneTabs(){
   const s=D.nutzer?.sicht||'alle'; const t=(s==='alle'?['Alle','Marcel','Sascha']:[s]).concat(D.konten.some(istDemo)?['Demo']:[]);
   if(!t.includes(sicht)) sicht=t[0];
-  $('tabs').innerHTML=t.map(x=>`<button class="${x===sicht?'aktiv':''}" data-s="${x}">${x==='Alle'?'Alle zusammen':(x==='Demo'?'Demo / Test':x)}</button>`).join('');
-  $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{sicht=b.dataset.s; zeichneTabs(); zeichnen();});
+  $('tabs').innerHTML=t.map(x=>`<button class="${x===sicht?'aktiv':''}" data-s="${x}">${x==='Alle'?'Alle':(x==='Demo'?'Demo / Test':x)}</button>`).join('');
+  $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{sicht=b.dataset.s; lsSet('sicht',sicht); zeichneTabs(); zeichnen();});
 }
 
 function zustand(k){
@@ -248,118 +292,178 @@ function zustand(k){
   if(alt>5) gr.push(['rot',`meldet sich seit ${fmt(alt)} Min. nicht`]);
   if(k.verbunden===false) gr.push(['rot','keine Verbindung zum Broker']);
   if(k.algo_an===false) gr.push(['rot','Algo-Handel ist AUS']);
-  if(k.charts_ok===false) gr.push(['rot','EA-Pr&uuml;fung: '+(k.charts_info||'').split(':')[0]]);
+  if(k.charts_ok===false) gr.push(['rot','EA-Prüfung: '+(k.charts_info||'').split(':')[0]]);
   if(k.limit_tag_pct && -tagV>k.limit_tag_pct*0.6) gr.push(['warn',`Tagesverlust ${fmt(-tagV,1)} % von ${fmt(k.limit_tag_pct,1)} %`]);
   if(k.limit_max_pct && -gesV>k.limit_max_pct*0.6) gr.push(['warn',`Gesamtverlust ${fmt(-gesV,1)} % von ${fmt(k.limit_max_pct,1)} %`]);
   const st=gr.some(x=>x[0]==='rot')?'rot':(gr.length?'warn':'');
   return {st,gr,tagV,gesV,alt};
 }
 
+// ---- Abgleich der Signale über die Konten ----
+// Gleicher Motor + Richtung = ein Signal; Fenster 30 Min. (M15) bzw. 2 Std. (H1, BTC, Tag), weil Broker die Nachtkerze unterschiedlich bilden.
+const fenster=m=>[3300,3400,3500,3600,4000,4300,4400,5000,6230].includes(m)?120:30;
+function abgleich(K,P){
+  const relevant=(k,m)=>istB(m)?/(^|\W)B(\W|$)/.test(k.system||''):(istES(m)?/ESNA1/.test(k.system||''):false);
+  // Konto zählt ab der letzten Einzahlung/Reset und ab seinem ersten Trade des Systems (B bzw. ESNA1)
+  const fam=m=>istES(m)?'E':'B', reset=resetZeiten();
+  const erstes={}; for(const p of P){ if(!p.ein||!p.magic) continue; const k=p.konto_id+'|'+fam(p.magic); if(reset[p.konto_id]&&p.ein<reset[p.konto_id]) continue; if(!erstes[k]||p.ein<erstes[k]) erstes[k]=p.ein; }
+  const sys=P.filter(p=>p.magic&&p.ein&&(istB(p.magic)||istES(p.magic))).sort((a,b)=>new Date(a.ein)-new Date(b.ein)); const sig=[];
+  for(const p of sys){ const t=new Date(p.ein);
+    const s=sig.find(x=>x.magic===p.magic&&x.dir===p.dir&&t-x.t>=0&&t-x.t<=fenster(p.magic)*60000&&!x.k[p.konto_id]);
+    if(s) s.k[p.konto_id]=p; else sig.push({magic:p.magic,dir:p.dir,t,k:{[p.konto_id]:p}}); }
+  for(const s of sig){
+    const KS=K.filter(k=>relevant(k,s.magic)&&erstes[k.konto_id+'|'+fam(s.magic)]&&new Date(erstes[k.konto_id+'|'+fam(s.magic)])<=s.t);
+    s.konten=KS.map(k=>k.konto_id); const da=KS.filter(k=>s.k[k.konto_id]).length, fehlt=KS.length-da;
+    s.z={};
+    for(const k of KS){ const id=k.konto_id, p=s.k[id];
+      if(p){ const vers=Math.abs(new Date(p.ein)-s.t)>20*60000; s.z[id]={art:'da',p,vers,nurHier:da===1&&fehlt>=2}; continue; }
+      const belegt=P.some(q=>q.konto_id===id&&q.magic===s.magic&&q.ein&&new Date(q.ein)<s.t&&(!q.aus||new Date(q.aus)>s.t));
+      let grund=null;
+      if(belegt) grund='Platz belegt (eigener Trade noch offen)';
+      else if(s.magic===4000) grund='BTC-Kurse je Broker';
+      else if(da===1&&fehlt>=2) grund='Signal nur auf einem Konto';
+      s.z[id]={art:'fehlt',grund};
+    }
+  }
+  return sig;
+}
+
 function zeichnen(){
   const K=sichtbar(), ids=new Set(K.map(k=>k.konto_id));
   const deals=D.deals.filter(d=>ids.has(d.konto_id)); const P=positionen(deals); const zu=P.filter(p=>!p.offen);
-  const RK=risikoPruefung(K,deals); const rk7=RK.filter(x=>x.st==='neg'&&new Date(x.t)>=Date.now()-7*864e5);
-  const EG=eingriffe(deals); const eg7=EG.filter(x=>new Date(x.t)>=Date.now()-7*864e5);
+  const RK=risikoPruefung(K,deals);
+  const EG=eingriffe(deals);
+  const SIG=abgleich(K,P);
   const heute=tagDE(Date.now());
   const ergTag=t=>zu.filter(p=>tagDE(p.aus)===t).reduce((s,p)=>s+p.erg,0);
   const seit=tage=>{const g=Date.now()-tage*864e5; return zu.filter(p=>new Date(p.aus)>=g).reduce((s,p)=>s+p.erg,0);};
   const sum=f=>K.reduce((s,k)=>s+(+f(k)||0),0);
-  const start=sum(k=>k.groesse), bal=sum(k=>k.balance), eq=sum(k=>k.equity);
-  const offenErg=eq-bal;
-  $('kpis').innerHTML=[
-    ['Konten',K.length+' ('+K.filter(k=>zustand(k).st==='rot').length+' Problem)'],
-    ['Kapital (Startgröße)',fmt(start)+' $'],['Kontostand',fmt(bal)+' $'],
-    ['Gewinn seit Start',`<span class="${kl(bal-start)}">${geld(bal-start)}</span>`],
-    ['Heute (geschlossen)',`<span class="${kl(ergTag(heute))}">${geld(ergTag(heute))}</span>`],
-    ['Offen (schwebend)',`<span class="${kl(offenErg)}">${geld(offenErg)}</span>`],
-    ['Letzte 7 Tage',`<span class="${kl(seit(7))}">${geld(seit(7))}</span>`],
-    ['Letzte 30 Tage',`<span class="${kl(seit(30))}">${geld(seit(30))}</span>`]
-  ].map(([l,w])=>`<div class="kpi"><div class="l">${l}</div><div class="w">${w}</div></div>`).join('');
+  const start=sum(k=>k.groesse), bal=sum(k=>k.balance), eq=sum(k=>k.equity), offenErg=eq-bal;
 
-  // Konten-Karten
+  // Prüfung (14 Tage)
+  const ab14=Date.now()-14*864e5, W=[]; let harmlos=0;
+  for(const s of SIG){ if(s.t<ab14) continue;
+    for(const id of s.konten){ const z=s.z[id];
+      if(z.art==='fehlt'&&!z.grund) W.push({t:s.t,st:'neg',konto:id,txt:`${mName(s.magic)} ${s.dir>0?'Long':'Short'}: Signal fehlt – Journal („Experten“) prüfen`});
+      else if(z.art==='fehlt'||z.vers||z.nurHier) harmlos++; } }
+  // hängender Motor: letzte 2+ Signale dieses Motors in Folge ohne Grund gefehlt
+  for(const k of K){ const mags=[...new Set(SIG.filter(s=>s.konten.includes(k.konto_id)).map(s=>s.magic))];
+    for(const m of mags){ const ls=SIG.filter(s=>s.magic===m&&s.konten.includes(k.konto_id)).slice(-3); let n=0;
+      for(let i=ls.length-1;i>=0;i--){ const z=ls[i].z[k.konto_id]; if(z.art==='fehlt'&&!z.grund) n++; else break; }
+      if(n>=2) W.push({t:ls[ls.length-1].t,st:'neg',konto:k.konto_id,txt:`${mName(m)}: die letzten ${n} Signale fehlen – läuft der Chart?`}); } }
+  const EGp={}; for(const e of EG){ if(new Date(e.t)<ab14||!e.m) continue; const g=EGp[e.pos]||(EGp[e.pos]={t:new Date(e.t),konto:e.konto,m:e.m,n:0,erg:0,tp:false}); g.n++; g.erg+=e.erg||0; if(/TP/.test(e.art)) g.tp=true; if(new Date(e.t)>g.t) g.t=new Date(e.t); }
+  for(const g of Object.values(EGp)) W.push({t:g.t,st:'gelb',konto:g.konto,txt:`✋ ${mName(g.m)}: von Hand ${g.tp?'(mit Ziel/TP) ':''}geschlossen${g.n>1?' in '+g.n+' Teilen':''} (${geld(g.erg)})`});
+  for(const r of RK){ if(new Date(r.t)>=ab14&&r.st==='neg') W.push({t:new Date(r.t),st:'neg',konto:r.konto,txt:`Risiko ${mName(r.m)}: ${r.text}`}); }
+  for(const k of K){ const z=zustand(k); for(const g of z.gr) W.push({t:new Date(),st:g[0]==='rot'?'neg':'gelb',konto:k.konto_id,txt:g[1]}); }
+  W.sort((a,b)=>b.t-a.t);
+  const Wz=grenze(W,'pruef');
+  $('pruef').innerHTML=(W.length?Wz.map(w=>`<div><span class="z">${zeit(w.t)}</span><span><b>${kn(w.konto)}</b> <span class="${w.st}">● ${w.txt}</span></span></div>`).join('')+(W.length>Wz.length?`<button class="btn mehr" id="pruefMehr">alle ${W.length} anzeigen</button>`:''):'<div class="pos">● Alles in Ordnung: alle Signale auf allen Konten, keine Handeingriffe, Risiko passt.</div>')+
+    `<div class="mut" style="margin-top:4px">${harmlos} harmlose Abweichungen (andere Kerze, BTC-Kurse, Platz belegt) – siehe „Signale je Konto“.</div>`;
+  if($('pruefMehr')) $('pruefMehr').onclick=()=>{ MEHR.pruef=(MEHR.pruef||0)+1000; zeichnen(); };
+
+  const nRot=W.filter(w=>w.st==='neg').length;
+  $('kpis').innerHTML=[
+    ['Konten',K.length+(nRot?` · <span class="neg">${nRot} ⚠</span>`:' · <span class="pos">ok</span>')],
+    ['Kontostand',fmt(bal)+' $'],
+    ['Seit Start',`<span class="${kl(bal-start)}">${geld(bal-start)}</span>`],
+    ['Offen',`<span class="${kl(offenErg)}">${geld(offenErg)}</span>`],
+    ['Heute',`<span class="${kl(ergTag(heute))}">${geld(ergTag(heute))}</span>`],
+    ['7 Tage',`<span class="${kl(seit(7))}">${geld(seit(7))}</span>`],
+    ['30 Tage',`<span class="${kl(seit(30))}">${geld(seit(30))}</span>`,'ph'],
+    ['Startgröße',fmt(start)+' $','ph']
+  ].map(([l,w,c])=>`<div class="kpi ${c||''}"><div class="l">${l}</div><div class="w">${w}</div></div>`).join('');
+
+  // Konten (kompakt)
   $('konten').innerHTML=K.map(k=>{
     const z=zustand(k), g=+k.groesse||+k.balance, gew=(+k.balance-g)/g*100;
-    const ef=eg7.filter(x=>x.konto===k.konto_id); if(ef.length) z.gr.push(['info',`${ef.length} Eingriff${ef.length>1?'e':''} von Hand in den letzten 7 Tagen (siehe unten)`]);
-    const rf=rk7.filter(x=>x.konto===k.konto_id); if(rf.length){ z.gr.push(['warn',`Risiko weicht ab: ${[...new Set(rf.map(x=>mName(x.m)))].join(', ')} (siehe Risiko-Kontrolle)`]); if(!z.st) z.st='warn'; }
-    const ziel=+k.ziel_pct>0?Math.max(0,Math.min(100,gew/k.ziel_pct*100)):null;
+    const kw=W.filter(w=>w.konto===k.konto_id&&w.st==='neg').length, kh=W.filter(w=>w.konto===k.konto_id&&w.st==='gelb').length;
+    const st=z.st||(kw?'warn':'');
     const off=(k.offene||[]); const offE=off.reduce((s,o)=>s+ +o.gewinn,0);
+    const ziel=+k.ziel_pct>0?Math.max(0,Math.min(100,gew/k.ziel_pct*100)):null;
     const tagRis=k.limit_tag_pct?Math.max(0,Math.min(100,-z.tagV/k.limit_tag_pct*100)):0;
     const gesRis=k.limit_max_pct?Math.max(0,Math.min(100,-z.gesV/k.limit_max_pct*100)):0;
-    return `<div class="konto ${z.st}">
-      <div class="kopf"><div><div class="name">${k.konto_id}</div><div class="sub">${k.person} · ${k.firma} · ${k.phase||''} · System ${k.system||''}</div></div>
-      <div style="text-align:right"><div style="font-weight:600">${fmt(k.balance)} $</div><div class="sub ${kl(gew)}">${pc(gew)}</div></div></div>
-      <div class="zeile"><span class="mut">Equity</span><span>${fmt(k.equity)} $</span></div>
-      <div class="zeile"><span class="mut">Heute</span><span class="${kl(z.tagV)}">${pc(z.tagV)}</span></div>
-      <div class="zeile"><span class="mut">Offene Trades</span><span>${off.length}${off.length?` (<span class="${kl(offE)}">${geld(offE)}</span>)`:''}</span></div>
-      ${ziel!=null?`<div class="zeile"><span class="mut">Challenge-Ziel</span><span>${pc(gew)} von ${fmt(k.ziel_pct,1)} %</span></div><div class="balken"><i style="width:${ziel}%"></i></div><div class="zeile"><span class="mut">Noch bis zum Ziel</span><span>${gew>=k.ziel_pct?'<span class="pos">erreicht</span>':fmt(k.ziel_pct-gew,2)+' % ('+fmt((k.ziel_pct-gew)/100*g)+' $)'}</span></div>`:''}
-      <div class="zeile"><span class="mut">Tagesverlust</span><span>${fmt(Math.max(0,-z.tagV),2)} % von max. ${fmt(k.limit_tag_pct,1)} %</span></div><div class="balken risiko"><i style="width:${tagRis}%"></i></div>
-      <div class="zeile"><span class="mut">Abstand zur Gesamtgrenze</span><span>${fmt(k.limit_max_pct+z.gesV,2)} % (${fmt((k.limit_max_pct+z.gesV)/100*g)} $)</span></div><div class="balken risiko"><i style="width:${gesRis}%"></i></div>
-      <div class="status">${z.gr.some(x=>x[0]!=='info')?z.gr.filter(x=>x[0]!=='info').map(x=>`<div class="${x[0]==='rot'?'neg':''}">● ${x[1]}</div>`).join(''):'<span class="pos">● alles in Ordnung</span>'}
-      ${z.gr.filter(x=>x[0]==='info').map(x=>`<div class="mut">● ${x[1]}</div>`).join('')}
-      <div class="mut">gemeldet vor ${z.alt<1?'unter 1':fmt(z.alt)} Min. · EAs ${(k.charts_info||'').split(':')[0]}</div></div>
-    </div>`;}).join('') || (D.nutzer?'<div class="mut">Noch keine Konten.</div>':'<div class="neg">Dieser Login ist noch nicht freigeschaltet (kein Eintrag in der Tabelle „nutzer“). Bitte bei Marcel melden.</div>');
+    const stat=z.gr.length?z.gr.map(x=>`<span class="${x[0]==='rot'?'neg':'gelb'}">● ${x[1]}</span>`).join(' '):(kw?`<span class="neg">● ${kw} Hinweis${kw>1?'e':''} in „Prüfung“</span>`:'<span class="pos">● in Ordnung</span>');
+    return `<div class="konto ${st}">
+      <div class="kopf"><div><span class="name">${kn(k.konto_id)}</span> <span class="sub">${k.person} · ${k.phase||''} · ${k.system||''}</span></div>
+      <div style="text-align:right;white-space:nowrap"><b>${fmt(k.balance)} $</b> <span class="${kl(gew)}">${pc(gew)}</span></div></div>
+      <div class="chips"><span><b>Heute</b> <span class="${kl(z.tagV)}">${pc(z.tagV)}</span></span><span><b>Offen</b> ${off.length}${off.length?` <span class="${kl(offE)}">${geld(offE)}</span>`:''}</span>${ziel!=null?`<span><b>Ziel</b> ${gew>=k.ziel_pct?'<span class="pos">erreicht</span>':fmt(gew,2)+' / '+fmt(k.ziel_pct,0)+' %'}</span>`:''}${kh?`<span class="gelb">✋ ${kh}</span>`:''}</div>
+      ${ziel!=null?`<div class="balken"><i style="width:${ziel}%"></i></div>`:''}
+      <div class="bars"><div class="bar"><div class="t"><span>Tag</span><span>${fmt(Math.max(0,-z.tagV),1)} / ${fmt(k.limit_tag_pct,0)} %</span></div><div class="balken r"><i style="width:${tagRis}%"></i></div></div>
+      <div class="bar"><div class="t"><span>Gesamt</span><span>${fmt(Math.max(0,-z.gesV),1)} / ${fmt(k.limit_max_pct,0)} %</span></div><div class="balken r"><i style="width:${gesRis}%"></i></div></div></div>
+      <div class="status">${stat} · vor ${z.alt<1?'<1':fmt(z.alt)} Min. · ${(k.charts_info||'').split(':')[0]}</div>
+    </div>`;}).join('') || (D.nutzer?'<div class="mut">Noch keine Konten.</div>':'<div class="neg">Dieser Login ist noch nicht freigeschaltet. Bitte bei Marcel melden.</div>');
+
+  // Offene Trades (direkt unter den Konten)
+  const off=K.flatMap(k=>(k.offene||[]).map(o=>({...o,konto:k.konto_id}))).sort((a,b)=>(b.zeit||0)-(a.zeit||0));
+  const offSum=off.reduce((s,o)=>s+ +o.gewinn,0);
+  $('offenInfo').innerHTML=off.length?`${off.length} · <span class="${kl(offSum)}">${geld(offSum)}</span>`:'';
+  $('offen').innerHTML='<tr><th>Konto</th><th>Motor</th><th>L/S</th><th>Lots</th><th class="ph">Symbol</th><th class="ph">Einstieg</th><th class="ph">Stop</th><th class="ph">Aktuell</th><th>Ergebnis</th></tr>'+
+    (off.length?off.map(o=>`<tr><td>${kn(o.konto)}</td><td>${mKurz(+o.magic)}</td><td>${o.typ==='buy'?'L':'S'}</td><td>${fmt(o.volumen,2)}</td><td class="ph">${o.symbol}</td><td class="ph">${o.preis}</td><td class="ph">${o.sl||'–'}</td><td class="ph">${o.aktuell}</td><td class="${kl(+o.gewinn)}">${geld(+o.gewinn)}</td></tr>`).join(''):'<tr><td colspan="9" class="mut">Keine offenen Trades.</td></tr>');
+
+  // Signale je Konto
+  const KS=K.filter(k=>k.system);
+  const letzte=SIG.slice().reverse(); const Lz=grenze(letzte,'vergleich'); mehrKnopf('vergleich',letzte.length);
+  const nF=letzte.filter(s=>s.t>=ab14).reduce((n,s)=>n+s.konten.filter(id=>s.z[id].art==='fehlt'&&!s.z[id].grund).length,0);
+  $('vergleichInfo').innerHTML=nF?`<span class="neg">${nF} ungeklärt (14 T.)</span>`:'<span class="pos">alles erklärt</span>';
+  $('vergleich').innerHTML='<tr><th>Zeit</th><th>Motor</th>'+KS.map(k=>`<th>${kn(k.konto_id)}</th>`).join('')+'</tr>'+
+    Lz.map(s=>`<tr><td>${zeit(s.t)}</td><td>${mKurz(s.magic)} ${s.dir>0?'L':'S'}</td>`+
+      KS.map(k=>{ const z=s.z[k.konto_id]; if(!z) return '<td class="mut">·</td>';
+        if(z.art==='da'){ const p=z.p; return `<td title="${zeit(p.ein)}">${z.vers?'🕐':'<span class="ja">✓</span>'}${p.hand?'✋':''} <span class="${kl(p.erg)}">${p.offen?'offen':geld(p.erg)}</span></td>`; }
+        return z.grund?`<td class="grau" title="${z.grund}">○</td>`:'<td class="nein" title="fehlt ohne erkennbaren Grund">✗</td>'; }).join('')+'</tr>').join('');
 
   // Risiko-Kontrolle
-  const nRot=RK.filter(x=>x.st==='neg').length, nGelb=RK.filter(x=>x.st==='gelb').length;
-  $('risikoInfo').innerHTML=RK.length?`${RK.length} Einstiege geprüft · <span class="${nRot?'neg':'pos'}">${nRot} rot</span> · <span class="${nGelb?'gelb':'mut'}">${nGelb} gelb</span> · grün = Sollwert ±10 %`:'Noch keine Einstiege in den letzten 30 Tagen.';
-  const RKz=($('nurAuffaellig').checked?RK.filter(x=>x.st!=='pos'):RK).slice(0,100);   // immer nach Zeit, neueste oben
-  $('risiko').innerHTML='<tr><th>Zeit</th><th>Konto</th><th>Motor</th><th>Lots</th><th>Risiko ist</th><th>Soll</th><th>Bewertung</th></tr>'+
-    (RKz.length?RKz.map(x=>`<tr><td>${new Date(x.t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${kurz(x.konto)}</td><td>${mName(x.m)}</td><td>${fmt(x.lots,2)}</td><td>${x.ist==null?'–':fmt(x.ist,3)+' %'}</td><td>${x.soll==null?'–':fmt(x.soll,3)+' %'}</td><td class="${x.st}">● ${x.text}</td></tr>`).join(''):'<tr><td colspan="7" class="mut">–</td></tr>');
+  const nR=RK.filter(x=>x.st==='neg').length, nG=RK.filter(x=>x.st==='gelb').length;
+  $('risikoInfo').innerHTML=RK.length?`<span class="${nR?'neg':'pos'}">${nR} rot</span> · <span class="${nG?'gelb':'mut'}">${nG} gelb</span> · ${RK.length} geprüft`:'–';
+  const RKa=($('nurAuffaellig').checked?RK.filter(x=>x.st!=='pos'):RK); const RKz=grenze(RKa,'risiko'); mehrKnopf('risiko',RKa.length);
+  $('risiko').innerHTML='<tr><th>Zeit</th><th>Konto</th><th>Motor</th><th class="ph">Lots</th><th>Ist</th><th class="ph">Soll</th><th>Bewertung</th></tr>'+
+    (RKz.length?RKz.map(x=>`<tr><td>${zeit(x.t)}</td><td>${kn(x.konto)}</td><td>${mKurz(x.m)}</td><td class="ph">${fmt(x.lots,2)}</td><td>${x.ist==null?'–':fmt(x.ist,3)+' %'}</td><td class="ph">${x.soll==null?'–':fmt(x.soll,3)+' %'}</td><td class="${x.st}" style="text-align:left">● ${x.text}</td></tr>`).join(''):'<tr><td colspan="7" class="mut">–</td></tr>');
 
-  // Eingriffe von Hand (letzte 60 Tage)
-  const EGz=EG.filter(x=>new Date(x.t)>=Date.now()-60*864e5);
-  const egSum=EGz.reduce((s,x)=>s+(x.erg||0),0);
-  $('eingriffInfo').innerHTML=EGz.length?`${EGz.length} Eingriffe in 60 Tagen · Ergebnis dieser Schließungen zusammen <span class="${kl(egSum)}">${geld(egSum)}</span>`:'Keine Eingriffe von Hand in den letzten 60 Tagen.';
-  $('eingriffe').innerHTML='<tr><th>Zeit</th><th>Konto</th><th>Motor</th><th>Symbol</th><th>Was</th><th>Ergebnis</th></tr>'+
-    (EGz.length?EGz.map(x=>`<tr><td>${new Date(x.t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${kurz(x.konto)}</td><td>${x.m?mName(x.m):'–'}</td><td>${x.symbol||''}</td><td class="${x.st}">● ${x.art}</td><td class="${kl(x.erg||0)}">${x.erg==null?'–':geld(x.erg)}</td></tr>`).join(''):'<tr><td colspan="6" class="mut">–</td></tr>');
+  // Eingriffe von Hand
+  const EGz=EG.filter(x=>new Date(x.t)>=Date.now()-60*864e5); const egSum=EGz.reduce((s,x)=>s+(x.erg||0),0);
+  $('eingriffInfo').innerHTML=EGz.length?`${EGz.length} in 60 T. · <span class="${kl(egSum)}">${geld(egSum)}</span>`:'<span class="pos">keine</span>';
+  const EGg=grenze(EGz,'eingriffe'); mehrKnopf('eingriffe',EGz.length);
+  $('eingriffe').innerHTML='<tr><th>Zeit</th><th>Konto</th><th>Motor</th><th>Was</th><th>Ergebnis</th></tr>'+
+    (EGg.length?EGg.map(x=>`<tr><td>${zeit(x.t)}</td><td>${kn(x.konto)}</td><td>${x.m?mKurz(x.m):'–'}</td><td class="${x.st}" style="text-align:left">● ${x.art}</td><td class="${kl(x.erg||0)}">${x.erg==null?'–':geld(x.erg)}</td></tr>`).join(''):'<tr><td colspan="5" class="mut">–</td></tr>');
 
-  // Kurve: Kontostand je Tag aus Deals (alle sichtbaren Konten summiert)
-  const tageSet=[...new Set(deals.map(d=>tagDE(d.zeit_utc)))].sort();
-  const proTag={}; for(const d of deals){ const t=tagDE(d.zeit_utc); proTag[t]=(proTag[t]||0)+ +d.gewinn+ +d.swap+ +d.kommission; }
-  let lauf=0; const kurve=tageSet.map(t=>(lauf+=proTag[t]));
-  if(kurveChart) kurveChart.destroy();
-  kurveChart=new Chart($('kurve'),{type:'line',data:{labels:tageSet,datasets:[{label:'Kontostand (Summe)',data:kurve,borderColor:getComputedStyle(document.body).getPropertyValue('--accent'),pointRadius:0,borderWidth:2,fill:false}]},
-    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:10}},y:{ticks:{callback:v=>fmt(v)}}},interaction:{intersect:false,mode:'index'}}});
+  // Verlauf (nur zeichnen, wenn aufgeklappt)
+  if($('d_verlauf').open){
+    const tageSet=[...new Set(deals.map(d=>tagDE(d.zeit_utc)))].sort();
+    const proTag={}; for(const d of deals){ const t=tagDE(d.zeit_utc); proTag[t]=(proTag[t]||0)+ +d.gewinn+ +d.swap+ +d.kommission; }
+    let lauf=0; const kurve=tageSet.map(t=>(lauf+=proTag[t]));
+    if(kurveChart) kurveChart.destroy();
+    kurveChart=new Chart($('kurve'),{type:'line',data:{labels:tageSet,datasets:[{label:'Kontostand (Summe)',data:kurve,borderColor:getComputedStyle(document.body).getPropertyValue('--accent'),pointRadius:0,borderWidth:2,fill:false}]},
+      options:{animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:6}},y:{ticks:{callback:v=>fmt(v)}}},interaction:{intersect:false,mode:'index'}}});
+  }
 
-  // Pro Tag, letzte 30 Tage mit Handel
-  const tL=[...new Set(zu.map(p=>tagDE(p.aus)))].sort().reverse().slice(0,30);
-  $('tage').innerHTML='<tr><th>Tag</th>'+K.map(k=>`<th>${kurz(k.konto_id)}</th>`).join('')+'<th>Gesamt</th><th>Trades</th></tr>'+
-    tL.map(t=>{ const r=K.map(k=>zu.filter(p=>p.konto_id===k.konto_id&&tagDE(p.aus)===t).reduce((s,p)=>s+p.erg,0)); const s=r.reduce((a,b)=>a+b,0);
+  // Pro Tag
+  const tL=[...new Set(zu.map(p=>tagDE(p.aus)))].sort().reverse(); const tLz=grenze(tL,'tage'); mehrKnopf('tage',tL.length);
+  $('tage').innerHTML='<tr><th>Tag</th>'+K.map(k=>`<th>${kn(k.konto_id)}</th>`).join('')+'<th>Gesamt</th><th>Trades</th></tr>'+
+    tLz.map(t=>{ const r=K.map(k=>zu.filter(p=>p.konto_id===k.konto_id&&tagDE(p.aus)===t).reduce((s,p)=>s+p.erg,0)); const s=r.reduce((a,b)=>a+b,0);
       const n=zu.filter(p=>tagDE(p.aus)===t).length;
       return `<tr><td>${new Date(t).toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'})}</td>${r.map(v=>`<td class="${kl(v)}">${v?geld(v):'–'}</td>`).join('')}<td class="${kl(s)}"><b>${geld(s)}</b></td><td>${n}</td></tr>`;}).join('');
 
   // Wochen / Monate
   const per=(f)=>{const m={}; for(const p of zu){const k=f(new Date(p.aus)); m[k]=(m[k]||0)+p.erg;} return Object.entries(m).sort().reverse();};
-  const kw=d=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const n=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-n); const y=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return t.getUTCFullYear()+' KW '+String(Math.ceil(((t-y)/864e5+1)/7)).padStart(2,'0');};
+  const kw=d=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const n=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-n); const y=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return 'KW '+String(Math.ceil(((t-y)/864e5+1)/7)).padStart(2,'0');};
   const mo=d=>d.toLocaleDateString('sv-SE',{timeZone:'Europe/Berlin'}).slice(0,7);
-  const W=per(kw).slice(0,8), M=per(mo).slice(0,12);
+  const Wk=per(kw).slice(0,8), M=per(mo).slice(0,12);
   $('perioden').innerHTML='<tr><th>Woche</th><th>Ergebnis</th><th>Monat</th><th>Ergebnis</th></tr>'+
-    Array.from({length:Math.max(W.length,M.length)},(_,i)=>`<tr><td>${W[i]?.[0]||''}</td><td class="${kl(W[i]?.[1]||0)}">${W[i]?geld(W[i][1]):''}</td><td>${M[i]?.[0]||''}</td><td class="${kl(M[i]?.[1]||0)}">${M[i]?geld(M[i][1]):''}</td></tr>`).join('');
+    Array.from({length:Math.max(Wk.length,M.length)},(_,i)=>`<tr><td>${Wk[i]?.[0]||''}</td><td class="${kl(Wk[i]?.[1]||0)}">${Wk[i]?geld(Wk[i][1]):''}</td><td>${M[i]?.[0]||''}</td><td class="${kl(M[i]?.[1]||0)}">${M[i]?geld(M[i][1]):''}</td></tr>`).join('');
 
   // Motoren
   const zr=+$('motorZeitraum').value; const ab=zr?Date.now()-zr*864e5:0;
   const mm={}; for(const p of zu){ if(new Date(p.aus)<ab) continue; const m=mm[p.magic]||(mm[p.magic]={n:0,g:0,s:0,best:-1e18,worst:1e18}); m.n++; m.s+=p.erg; if(p.erg>0)m.g++; m.best=Math.max(m.best,p.erg); m.worst=Math.min(m.worst,p.erg);}
-  $('motoren').innerHTML='<tr><th>Motor</th><th>Trades</th><th>Treffer</th><th>Ergebnis</th><th>Bester</th><th>Schlechtester</th></tr>'+
-    Object.entries(mm).sort((a,b)=>a[0]-b[0]).map(([m,x])=>`<tr><td>${mName(+m)}</td><td>${x.n}</td><td>${fmt(x.g/x.n*100)} %</td><td class="${kl(x.s)}"><b>${geld(x.s)}</b></td><td class="pos">${geld(x.best)}</td><td class="neg">${geld(x.worst)}</td></tr>`).join('');
-
-  // Vergleich: Signale clustern (Motor + Richtung, Einstieg innerhalb 30 Min.)
-  const sys=P.filter(p=>p.magic&&p.ein).sort((a,b)=>new Date(a.ein)-new Date(b.ein)); const sig=[];
-  for(const p of sys){ const t=new Date(p.ein); const s=sig.find(x=>x.magic===p.magic&&x.dir===p.dir&&Math.abs(t-x.t)<=30*60000);
-    if(s){ (s.k[p.konto_id]=s.k[p.konto_id]||[]).push(p); } else sig.push({magic:p.magic,dir:p.dir,t,k:{[p.konto_id]:[p]}}); }
-  const erstes={}; for(const p of P){ if(p.ein&&(!erstes[p.konto_id]||p.ein<erstes[p.konto_id])) erstes[p.konto_id]=p.ein; }
-  const KS=K.filter(k=>k.system); const letzte=sig.reverse().slice(0,60);
-  $('vergleich').innerHTML='<tr><th>Zeit</th><th>Motor</th><th>Richtung</th>'+KS.map(k=>`<th>${kurz(k.konto_id)}</th>`).join('')+'</tr>'+
-    letzte.map(s=>`<tr><td>${s.t.toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${mName(s.magic)}</td><td>${s.dir>0?'Long':'Short'}</td>`+
-      KS.map(k=>{ const ps=s.k[k.konto_id]; if(ps){ const e=ps.reduce((a,p)=>a+p.erg,0), of=ps.some(p=>p.offen); return `<td><span class="ja">✓</span> <span class="${kl(e)}">${of?'offen':geld(e)}</span></td>`; }
-        const st=erstes[k.konto_id]; return (!st||new Date(st)>s.t)?'<td class="mut">·</td>':'<td class="nein">✗</td>'; }).join('')+'</tr>').join('');
-
-  // Offene Positionen
-  const off=K.flatMap(k=>(k.offene||[]).map(o=>({...o,konto:k.konto_id})));
-  $('offen').innerHTML='<tr><th>Konto</th><th>Motor</th><th>Symbol</th><th>Richtung</th><th>Lots</th><th>Einstieg</th><th>SL</th><th>Aktuell</th><th>Ergebnis</th></tr>'+
-    (off.length?off.map(o=>`<tr><td>${kurz(o.konto)}</td><td>${mName(+o.magic)}</td><td>${o.symbol}</td><td>${o.typ==='buy'?'Long':'Short'}</td><td>${fmt(o.volumen,2)}</td><td>${o.preis}</td><td>${o.sl||'–'}</td><td>${o.aktuell}</td><td class="${kl(+o.gewinn)}">${geld(+o.gewinn)}</td></tr>`).join(''):'<tr><td colspan="9" class="mut">Keine offenen Positionen.</td></tr>');
+  $('motoren').innerHTML='<tr><th>Motor</th><th>Trades</th><th>Treffer</th><th>Ergebnis</th><th class="ph">Bester</th><th class="ph">Schlechtester</th></tr>'+
+    Object.entries(mm).sort((a,b)=>a[0]-b[0]).map(([m,x])=>`<tr><td>${mName(+m)}</td><td>${x.n}</td><td>${fmt(x.g/x.n*100)} %</td><td class="${kl(x.s)}"><b>${geld(x.s)}</b></td><td class="pos ph">${geld(x.best)}</td><td class="neg ph">${geld(x.worst)}</td></tr>`).join('');
 }
 
-$('motorZeitraum').onchange=zeichnen; $('nurAuffaellig').onchange=zeichnen;
+// Bedienung
+$('zeilen').value=lsGet('zeilen','10'); if(!$('zeilen').value) $('zeilen').value='10';
+$('zeilen').onchange=()=>{ lsSet('zeilen',$('zeilen').value); for(const k in MEHR) delete MEHR[k]; zeichnen(); };
+document.querySelectorAll('[data-mehr]').forEach(b=>b.onclick=()=>{ const n=b.dataset.mehr; MEHR[n]=(MEHR[n]||0)+N(); zeichnen(); });
+document.querySelectorAll('details').forEach(d=>{ d.open=lsGet('offen_'+d.id,'0')==='1'; d.addEventListener('toggle',()=>{ lsSet('offen_'+d.id,d.open?'1':'0'); if(d.id==='d_verlauf'&&d.open&&D.konten.length) zeichnen(); }); });
+sicht=lsGet('sicht','Alle');
+$('motorZeitraum').onchange=zeichnen; $('nurAuffaellig').onchange=zeichnen; $('neu').onclick=laden;
 $('loginBtn').onclick=async()=>{ $('loginFehler').textContent='';
   const {error}=await SB.auth.signInWithPassword({email:$('email').value.trim(),password:$('pw').value});
   if(error) $('loginFehler').textContent='Anmeldung fehlgeschlagen'; };
